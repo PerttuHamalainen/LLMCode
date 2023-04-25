@@ -89,6 +89,7 @@ Compared to the paper, this repository adds the code quality evaluation, allows 
 ### Todo
 
 * Colab notebook to allow usage without installing anything
+* Interactive visualization and visual editing of the codes and groups
 * Support for other language models such as StableLM — using a local model would mitigate the data protection issues one may have with OpenAI’s models.
 * More thorough validation, once we have enough ground truth codes from multiple human coders
 * Export to Atlas.ti and other qualitative analysis software, to allow more flexible manual refinement
