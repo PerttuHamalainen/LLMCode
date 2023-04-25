@@ -1,0 +1,11 @@
+umap-learn
+nltk
+pandas
+matplotlib==3.5.1
+notebook
+ipywidgets
+openai
+plotly
+seaborn
+mne==0.24.1
+hdbscan
