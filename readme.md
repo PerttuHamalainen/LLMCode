@@ -3,9 +3,11 @@ This repository contains the **llmcode** Python package for **automatic qualitat
 Currently, we only support OpenAI models via the OpenAI API, but support for open and locally run models such as StableLM is in the works.
 
 ### Installing
-Download the repository, navigate to its root folder in a command line window, and run <code>pip install -r requirements</code>.
+Download the repository, navigate to its root folder in a command line window, and run:
 
-You also need to have your OpenAI API key set using the environment variable OPENAI_API_KEY
+    pip install -r requirements
+
+You also need to have your OpenAI API key defined using the environment variable OPENAI_API_KEY
 
 If you have Anaconda installed, you can run the following commands from a command line to install in a custom virtual environment.
 
@@ -16,14 +18,18 @@ If you have Anaconda installed, you can run the following commands from a comman
 
 
 
-### Usage:
+### Data Preparation
 
-To use the package, you should first format your data as a .csv that satisfies the following ([example data file](./test_data/bopp_test.csv)):
+To use llmcode, you should first format your data as a .csv that satisfies the following ([example data file](./test_data/bopp_test.csv)):
 
 *	The texts to code (e.g., sentences or paragraphs) are in a single column, one text per row.
 * A ”human_codes” column contains human-created example codes for at least some of the texts. These are used for specifying the coding style and also for analyzing code quality. If a text is assigned multiple codes, these should be separated by semicolons.
-* A "use_as_example” contains "1" for the human codes that specify the coding style, and is empty otherwise. Human codes that are not used as examples are used as validation data, for analyzing generated code quality.
+* A "use_as_example” contains "1" for the human codes that specify the coding style, and is empty otherwise. We recommend using between 10 and 20 examples. More examples is better, but as these are added to a coding prompt for each coded text, the OpenAI API cost scales proportional to the number of examples. Too many examples may also make the prompt exceed the used LLM's context size limit.
 
+Human codes that are not used as examples are used as validation data, for analyzing generated code quality.
+
+
+### Coding the Data
 
 Once you have the data formatted correctly, running the coding is easy from the command line, using the [analyze.py](analyze.py) helper. To test using the provided example data, run the following in the repository root folder:
 
@@ -42,22 +48,24 @@ The arguments used above are:
 <code>--emb_context</code> A context string that is appended to each generated code when generating code embeddings. This may help disambiguating codes that would be synonyms outside the specific context. In the example above, we use: ", as a reason for experiencing games as art"
 
 ### Generated Output
-[analyze.py](analyze.py) produces a number of output .csv files, and also prints a summary to the command line window. The test_result folder of this repository provides example results using the Bopp et al. data that was also used in the paper.
+[analyze.py](analyze.py) produces a number of output .csv files, and also prints a summary to the command line window. The [test_results](test_results) folder of this repository provides example results using [Bopp et al.](https://osf.io/25ptc/) "Why was this game art?" question responses. Note that the human codes are by us, as Bopp et al. coded multiple questions and responses as a whole.
 
 First, we provide a compact summary of code groups/themes, one group per row, and one example text:  
 
 ![](images/group_summary_cropped.png "Group summary")
 
-Second, we provide complete results in a .csv designed easy manual editing of the codes and groups/themes. Here, there is one row per code, an extra column for higher-level code groups/themes, and one or multiple extra columns which contain the texts assigned with the code, one text per column:
+Second, we provide complete results in a .csv designed easy manual editing of the codes and groups/themes. There is one row per code, an extra column for higher-level code groups/themes, and one or multiple extra columns which contain the texts assigned with the code, one text per column:
 
 ![](images/editable_result.png "Coding and grouping results, one code per line")
+
+The format should allow a human researcher to easily rename groups and move codes to different groups by copy-pasting the .csv lines.
 
 ### Evaluating Code Quality
 For evaluating code quality using the validation codes, we also produce a .csv that shows the human and LLM codes side-by-side, sorted from most human-like to least human-like. Before carrying out further analyses on a particular dataset, **one should check the least human-like codes to see whether the LLM coding errors are acceptable.**
 
 Here, human-likeness is calculated by treating the embedding vectors of the codes for a specific coded text as high-dimensional point clouds. The LLM and human point clouds are then compared using a Modified Hausdorff cosine distance metric. A distance of 1 means the codes are identical and both the LLM and human coder have assigned the same number of codes to the text.
 
-Below, you can see the 3 least human-like codes assigned to the Bopp et al. "Why was this game art?" question responses (human codes from us), using the <code>text-curie-001</code> model (our default):
+Below, you can see the 3 least human-like codes assigned to the Bopp et al. responses using the <code>text-curie-001</code> model (our default):
 
 ![](images/human-gpt-comparison.png "Worst case coding results")
 
@@ -71,16 +79,16 @@ On the other hand, the least human-like results can also reveal errors in the hu
 
 The coding and grouping is described in detail as part of Experiment 3 of the [CHI 2023 paper](https://dl.acm.org/doi/abs/10.1145/3544548.3580688). In brief, we first prompt a LLM with few-shot examples to perform the coding, compute LLM embedding vectors of the codes, reduce the dimensionality of the vectors using UMAP and then cluster the low-dimensional vectors using HDBSCAN.
 
-Compared to the paper, this repository adds the evaluation part, allows defining the few-shot examples as part of the input .csv, and also randomly shuffles the few-shot examples for each coded text, to reduce the recency bias common in LLMs.
+Compared to the paper, this repository adds the code quality evaluation, allows defining the few-shot examples as part of the input .csv, and also randomly shuffles the few-shot examples for each coded text, to reduce the recency bias common in LLMs.
 
 
 ### Todo
 
-⦁	Colab notebook to allow usage without installing anything
-⦁	Automatic extraction of coded snippets from longer texts.
-⦁	Support for other language models such as StableLM — using a local model would mitigate the data protection issues one may have with OpenAI’s models.
-⦁	More thorough validation, once we have enough ground truth codes from multiple human coders
-⦁	Export to Atlas.ti and other qualitative analysis software, to allow more flexible manual refinement
+* Colab notebook to allow usage without installing anything
+* Automatic extraction of coded snippets from longer texts.
+* Support for other language models such as StableLM — using a local model would mitigate the data protection issues one may have with OpenAI’s models.
+* More thorough validation, once we have enough ground truth codes from multiple human coders
+* Export to Atlas.ti and other qualitative analysis software, to allow more flexible manual refinement
 
 
 ### Citation 
