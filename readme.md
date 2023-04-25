@@ -67,7 +67,7 @@ The format should allow a human researcher to easily rename groups and move code
 ### Evaluating Code Quality
 For evaluating code quality using the validation codes, we also produce a .csv that shows the human and LLM codes side-by-side, sorted from most human-like to least human-like. Before carrying out further analyses on a particular dataset, **one should check the least human-like codes to see whether the LLM coding errors are acceptable.**
 
-Here, human-likeness is calculated by treating the embedding vectors of the codes for a specific coded text as high-dimensional point clouds. The LLM and human point clouds are then compared using a Modified Hausdorff cosine distance metric. A distance of 1 means the codes are identical and both the LLM and human coder have assigned the same number of codes to the text.
+Here, human-likeness is calculated by treating the embedding vectors of the codes for a specific coded text as high-dimensional point clouds. The LLM and human point clouds are then compared using a Modified Hausdorff cosine distance metric. A distance of 0 means the codes are identical and both the LLM and human coder have assigned the same number of codes to the text.
 
 Below, you can see the 3 least human-like codes assigned to the Bopp et al. responses using the <code>text-curie-001</code> model (our default):
 

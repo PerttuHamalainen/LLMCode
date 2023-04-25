@@ -518,35 +518,6 @@ def code_and_group(prompt_base,gpt_model,df,embedding_model="text-similarity-cur
     return group_codes(df_coded, embedding_context=embedding_context,min_group_size=min_group_size,use_cache=use_cache,group_desc_codes=group_desc_codes,grouping_dim=grouping_dim)
 '''
 
-'''
-def gpt_human_code_dist(df,embedding_context,embedding_model):
-    result=df.copy()
-
-    # calculate distances between gpt and human codes
-    gpt_codes = df["codes"].tolist()
-    human_codes = df["human_codes"].tolist()
-
-    hausdorff_distances = []
-
-    for i in range(df.shape[0]):
-        # extract individual codes
-        gpt_codes_split=[code.strip() for code in gpt_codes[i].split(";")]
-        human_codes_split=[code.strip() for code in human_codes[i].split(";")]
-
-        # add context and generate embeddings
-        gpt_codes_with_context = [code + embedding_context for code in gpt_codes_split]
-        gpt_embeddings = embed(gpt_codes_with_context, use_cache=True, model=embedding_model)
-        human_codes_with_context = [code + embedding_context for code in human_codes_split]
-        human_embeddings = embed(human_codes_with_context, use_cache=True, model=embedding_model)
-
-        # compute the modified Hausdorff distance
-        hausdorff_distances.append(hausdorff_embedding_distance(A=gpt_embeddings, B=human_embeddings))
-    result["dist"]=hausdorff_distances
-    result.rename(columns={"codes":"gpt_codes"},inplace=True)
-    # sort the result based on similarity
-    result_sorted = result.sort_values('dist', ascending=False)
-    return result_sorted
-'''
 
 def gpt_human_code_dist(df,embedding_context,embedding_model):
     result=df.copy()
@@ -581,12 +552,13 @@ def gpt_human_code_dist(df,embedding_context,embedding_model):
         ))
         i_gpt+=n_gpt
         i_human+=n_human
-
+    hausdorff_distances=np.array(hausdorff_distances)
+    hausdorff_distances=np.where(hausdorff_distances < 1e-10, 0, hausdorff_distances) #clean floating point accuracy errors
     result["dist"]=hausdorff_distances
     result.rename(columns={"codes":"gpt_codes"},inplace=True)
 
     # sort the result based on similarity
-    result_sorted = result.sort_values('dist', ascending=False)
+    result_sorted = result.sort_values('dist', ascending=True)
     return result_sorted
 
 
@@ -767,9 +739,9 @@ def hausdorff_embedding_distance(A,B,A_counts=None,B_counts=None):
     A/=np.linalg.norm(A,axis=1,keepdims=True)
     B/=np.linalg.norm(B,axis=1,keepdims=True)
     cosine_sim = np.inner(A, B)  #result shape [n_A,n_B]
-    #dist = 1.0 - cosine_sim  #cosine distance
+    cosine_dist = 1.0 - cosine_sim  #cosine distance
 
-    res = np.sum(A_counts*np.max(cosine_sim,axis=1))+np.sum(B_counts*np.max(cosine_sim,axis=0))
+    res = np.sum(A_counts*np.min(cosine_dist,axis=1))+np.sum(B_counts*np.min(cosine_dist,axis=0))
     res = res / (np.sum(A_counts)+np.sum(B_counts))
 
     return res
