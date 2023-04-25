@@ -2,6 +2,8 @@ This repository contains the **llmcode** Python package for **automatic qualitat
 
 Currently, we only support OpenAI models via the OpenAI API, but support for open and locally run models such as StableLM is in the works.
 
+*This initial release is still work-in-progress. Expect multiple updates during the next weeks.*
+
 ### Installing
 Download the repository, navigate to its root folder in a command line window, and run:
 
