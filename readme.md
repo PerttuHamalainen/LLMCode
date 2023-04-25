@@ -1,4 +1,4 @@
-This repository contains the **llmcode** Python package for **automatic qualitative data coding and analysis** using Large Language Models (LLMs). This is a further development of the initial version used for the CHI 2023 paper [Evaluating Large Language Models in Generating Synthetic HCI Research Data: a Case Study.](https://dl.acm.org/doi/abs/10.1145/3544548.3580688)
+This repository contains the **llmcode** Python toolkit for **automatic qualitative data coding and analysis** using Large Language Models (LLMs). This is a further development of the initial version used for the CHI 2023 paper [Evaluating Large Language Models in Generating Synthetic HCI Research Data: a Case Study.](https://dl.acm.org/doi/abs/10.1145/3544548.3580688)
 
 Currently, we only support OpenAI models via the OpenAI API, but support for open and locally run models such as StableLM is in the works.
 
