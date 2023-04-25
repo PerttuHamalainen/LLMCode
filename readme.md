@@ -38,6 +38,8 @@ Once you have the data formatted correctly, running the coding is easy from the 
 
     python analyze.py --input test_data/bopp_test.csv --output test_result --input_instr test_data/bopp_instruction.txt --column "why_art" --emb_context=", as a reason for experiencing games as art"
 
+**To minimize API costs, it's best to first try with a small dataset** up to a few hundred of short texts. The last time we checked, the test  above cost less than 0.5€.
+
 The arguments used above are:
 
 <code>--input</code> The input .csv file
