@@ -26,7 +26,7 @@ To use llmcode, you should first format your data as a .csv that satisfies the f
 
 *	The texts to code (e.g., sentences or paragraphs) are in a single column, one text per row.
 * A ”human_codes” column contains human-created example codes for at least some of the texts. These are used for specifying the coding style and also for analyzing code quality. If a text is assigned multiple codes, these should be separated by semicolons.
-* A "use_as_example” contains "1" for the human codes that specify the coding style, and is empty otherwise. We recommend using between 10 and 20 examples. More examples is better, but as these are added to a coding prompt for each coded text, the OpenAI API cost scales proportional to the number of examples. Too many examples may also make the prompt exceed the used LLM's context size limit.
+* A "use_as_example” column contains "1" for the human codes that specify the coding style, and is empty otherwise. We recommend using between 10 and 20 examples. More examples is better, but as these are added to a coding prompt for each coded text, the OpenAI API cost scales proportional to the number of examples. Too many examples may also make the prompt exceed the used LLM's context size limit.
 
 Human codes that are not used as examples are used as validation data, for analyzing generated code quality.
 
@@ -48,6 +48,8 @@ The arguments used above are:
 <code>--column</code> The name of the .csv column containing the texts to code
 
 <code>--emb_context</code> A context string that is appended to each generated code when generating code embeddings. This may help disambiguating codes that would be synonyms outside the specific context. In the example above, we use: ", as a reason for experiencing games as art"
+
+Use <code>python analyze.py --help</code> for info about additional optional arguments.
 
 ### Generated Output
 [analyze.py](analyze.py) produces a number of output .csv files, and also prints a summary to the command line window. The [test_results](test_results) folder of this repository provides example results using [Bopp et al.](https://osf.io/25ptc/) "Why was this game art?" question responses. Note that the human codes are by us, as Bopp et al. coded multiple questions and responses as a whole.
