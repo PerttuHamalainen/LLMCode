@@ -18,7 +18,7 @@ If you have Anaconda installed, you can run the following commands from a comman
 
 ### Usage:
 
-To use the package, you should first format your data as a .csv that satisfies the following ([example data file](https://github.com/PerttuHamalainen/LLMCode/test_data/bopp_test.csv)):
+To use the package, you should first format your data as a .csv that satisfies the following ([example data file](./test_data/bopp_test.csv)):
 
 *	The texts to code (e.g., sentences or paragraphs) are in a single column, one text per row.
 * A ”human_codes” column contains human-created example codes for at least some of the texts. These are used for specifying the coding style and also for analyzing code quality. If a text is assigned multiple codes, these should be separated by semicolons.
