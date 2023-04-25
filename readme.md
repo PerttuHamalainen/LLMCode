@@ -16,7 +16,8 @@ If you have Anaconda installed, you can run the following commands from a comman
     conda create --name llmcode python=3.8
     activate llmcode
     git clone https://github.com/PerttuHamalainen/LLMCode
-    pip install -r requirements
+    cd LLMCode
+    pip install -r requirements.txt
 
 
 
