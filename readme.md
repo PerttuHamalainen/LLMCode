@@ -25,7 +25,7 @@ To use the package, you should first format your data as a .csv that satisfies t
 * A "use_as_example” contains "1" for the human codes that specify the coding style, and is empty otherwise. Human codes that are not used as examples are used as validation data, for analyzing generated code quality.
 
 
-Once you have the data formatted correctly, running the coding is easy from the command line, using the [analyze.py](https://github.com/PerttuHamalainen/LLMCode/analyze.py) helper. To test using the provided example data, run the following in the repository root folder:
+Once you have the data formatted correctly, running the coding is easy from the command line, using the [analyze.py](analyze.py) helper. To test using the provided example data, run the following in the repository root folder:
 
     python analyze.py --input test_data/bopp_test.csv --output test_result --input_instr test_data/bopp_instruction.txt --column "why_art" --emb_context=", as a reason for experiencing games as art"
 
@@ -35,14 +35,14 @@ The arguments used above are:
 
 <code>--output</code> The output folder, where multiple result files will be created
 
-<code>--input_instr</code> A text file that contains the coding instruction given to the LLM. In the example above, we use [these instructions](https://github.com/PerttuHamalainen/LLMCode/test_data/bopp_instruction.txt).
+<code>--input_instr</code> A text file that contains the coding instruction given to the LLM. In the example above, we use [these instructions](./test_data/bopp_instruction.txt).
 
 <code>--column</code> The name of the .csv column containing the texts to code
 
 <code>--emb_context</code> A context string that is appended to each generated code when generating code embeddings. This may help disambiguating codes that would be synonyms outside the specific context. In the example above, we use: ", as a reason for experiencing games as art"
 
 ### Generated Output
-[analyze.py](https://github.com/PerttuHamalainen/LLMCode/analyze.py) produces a number of output .csv files, and also prints a summary to the command line window. The test_result folder of this repository provides example results using the Bopp et al. data that was also used in the paper.
+[analyze.py](analyze.py) produces a number of output .csv files, and also prints a summary to the command line window. The test_result folder of this repository provides example results using the Bopp et al. data that was also used in the paper.
 
 First, we provide a compact summary of code groups/themes, one group per row, and one example text:  
 
@@ -61,7 +61,7 @@ Below, you can see the 3 least human-like codes assigned to the Bopp et al. "Why
 
 ![](images/human-gpt-comparison.png "Worst case coding results")
 
-Although the [full .csv](https://github.com/PerttuHamalainen/LLMCode/test_results/bopp_test_human-gpt-comparison.csv) shows that the majority of codes are of high quality, the image above reveals that there are also errors such as the LLM missing the artistic intent that the human coder noticed.
+Although the [full .csv](./test_results/bopp_test_human-gpt-comparison.csv) shows that the majority of codes are of high quality, the image above reveals that there are also errors such as the LLM missing the artistic intent that the human coder noticed.
 
 On the other hand, the least human-like results can also reveal errors in the human coding. In the second example above, the human coder may have made a mistake in interpreting that the combination is the salient feature instead of the independent features, which the LLM has assigned separate codes.
 
