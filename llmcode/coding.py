@@ -506,18 +506,6 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
 
 
 
-'''
-def code_and_group(prompt_base,gpt_model,df,embedding_model="text-similarity-curie-001",column_to_code="texts",embedding_context="",min_group_size=3,group_desc_codes=2,grouping_dim=5,use_cache=True,verbose=True):
-    df_coded = code(prompt_base=prompt_base,
-                      gpt_model=gpt_model,
-                      df=df,
-                      column_to_code=column_to_code,
-                      use_cache=use_cache,
-                      verbose=verbose)
-    #df_single = extract_single_codes(df_coded)
-    return group_codes(df_coded, embedding_context=embedding_context,min_group_size=min_group_size,use_cache=use_cache,group_desc_codes=group_desc_codes,grouping_dim=grouping_dim)
-'''
-
 
 def gpt_human_code_dist(df,embedding_context,embedding_model):
     result=df.copy()
@@ -574,6 +562,7 @@ def code_and_group(df,
                    verbose=False):
     if embedding_context is None:
         embedding_context=""
+
     #Construct the coding prompt in the legacy format expected by the code() method.
     #TODO: remove this redundancy
     prompt_base=coding_instruction
@@ -582,6 +571,7 @@ def code_and_group(df,
     for i in range(len(few_shot_codes)):
         prompt_base+="\n\n###\n\nText: "+few_shot_texts[i]+"\n\n"+"Codes: "+few_shot_codes[i]
     prompt_base+="\n\n###\n\nText: "
+
 
     #Code
     df_coded = code(prompt_base=prompt_base,
@@ -667,12 +657,12 @@ def code_and_group(df,
 
     # Return a dict with all the info the caller might need for further analysis or data export
     result=group_info.copy()
+    result["prompt"]=prompt_base
     result["df_coded"]=df_coded
     result["df_validate"]=df_cmp
     result["df_editable"]=df_editable
     result["df_code_summary"]=df_code_summary
     result["df_group_summary"]=df_group_summary
-
     return result
 
 

@@ -55,13 +55,10 @@ results=llmcode.code_and_group(
 if not os.path.exists(args.output):
     os.mkdir(args.output)
 
-#Save the dataframe with codes and code groups for further inspection
+#Save all the outputs
 out_base_name=args.output+"/"+os.path.basename(args.input[:-4])
 results["df"].to_csv(out_base_name+"_coded.csv",index=False)
 results["df_editable"].to_csv(out_base_name+"_coded_editable.csv",index=False)
 results["df_group_summary"].to_csv(out_base_name+"_group_summary.csv",index=False)
 results["df_validate"].to_csv(out_base_name+"_human-gpt-comparison.csv",index=False)
-#out_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_results")
-
-#Visualize codes if needed (TODO:
-#if args.visualize_codes:
+open(out_base_name+"_prompt.txt", "w").write(results["prompt"])
