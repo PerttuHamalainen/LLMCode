@@ -121,7 +121,7 @@ The coding and grouping is described in detail as part of Experiment 3 of the [C
 
 Compared to the paper, this repository adds the code quality evaluation, allows defining the few-shot examples as part of the input .csv, and also randomly shuffles the few-shot examples for each coded text, to reduce the recency bias common in LLMs.
 
-The group/theme discovery is highly inspired by [BERTopic](https://maartengr.github.io/BERTopic/index.html), with two main differences: First, instead of embedding the raw texts, we embed the codes, which reduces noise and allows handling cases where a text represents multiple groups/themes. Instead of TF-IDF word analysis, we construct the human-readable group/theme descriptors using the codes closest to the embedding centroid of the group.
+The group/theme discovery is highly inspired by [BERTopic](https://maartengr.github.io/BERTopic/index.html), with two main differences: First, instead of embedding the raw texts, we embed the codes, which reduces noise and allows handling cases where a text represents multiple groups/themes. Second, instead of TF-IDF word analysis, we construct the human-readable group/theme descriptors using the codes closest to the embedding centroid of the group.
 
 ### Why not just use ChatGPT/GPT-4?
 The most recent LLMs like ChatGPT can conduct a form of qualitative analysis out of the box: Just paste your data to the chat, and ask ChatGPT to identify themes. However, this has multiple problems:
@@ -145,7 +145,7 @@ LLMCode only requires that a single coded text and the coding examples fit the c
 
 ### Citation 
 
-If you use this package for your research, please cite the paper:
+If you use LLMCode for your research, please cite the paper:
 
     @inproceedings{10.1145/3544548.3580688,
     author = {H\"{a}m\"{a}l\"{a}inen, Perttu and Tavast, Mikke and Kunnari, Anton},
