@@ -13,7 +13,7 @@ if os.environ.get('OPENAI_API_KEY') is None:
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--input', type=str, required=True, help="Path to the input data .csv")
-parser.add_argument('--input_instr', type=str, required=True, help="Path to a text file containing the coding instructions")
+parser.add_argument('--input_instr', type=str, required=False, help="Path to a text file containing the coding instructions")
 parser.add_argument('--column', type=str, required=True, help="Name of the data column with analyzed texts")
 parser.add_argument('--output', type=str, required=True, help="Output directory name")
 parser.add_argument('--coding_model', type=str, required=False, default="text-curie-001", help="LLM model for coding. Currently, only OpenAI models are supported")
@@ -26,6 +26,7 @@ parser.add_argument('--visualize_codes',type=bool, required=False, default=True,
 parser.add_argument('--random_seed',type=int, required=False, help="Random seed. This should be set (and will be set implicitly) if cached=True, because otherwise the random shuffling of the prompt examples will always create unique OpenAI API calls that cannot be cached.")
 parser.add_argument('--sep',type=str,required=False,default=",", help="The separator used in the .csv input")
 parser.add_argument('--encoding',type=str,required=False,default="ISO-8859-1", help="The encoding of .csv input")
+parser.add_argument('--dimred_method',type=str,required=False,default="UMAP", help="Dimensionality reduction method (TSNE or UMAP)")
 args = parser.parse_args()
 
 # Set the random seed
@@ -37,7 +38,17 @@ if args.random_seed is not None:
 
 # Read inputs
 df=pd.read_csv(args.input,sep=args.sep,encoding = args.encoding)
-coding_instruction=open(args.input_instr, "r").read()
+if args.input_instr is not None:
+    #read the coding instructions from text file
+    coding_instruction=open(args.input_instr, "r").read()
+else:
+    #check if the df specifies the instructions
+    if "coding_instructions" in df:
+        coding_instruction=df["coding_instructions"][0]
+    else:
+        raise Exception("Coding instructions not specified. Please specify using --input_instr or a .csv column named \"coding_instructions\"")
+
+print(df.head())
 
 # Deploy llmcode
 results=llmcode.code_and_group(
@@ -49,16 +60,37 @@ results=llmcode.code_and_group(
     embedding_model=args.embedding_model,
     min_group_size=args.min_group_size,
     grouping_dim=args.grouping_dim,
-    use_cache=args.use_cache)
+    use_cache=args.use_cache,
+    dimred_method=args.dimred_method
+)
 
 #Create output directory if needed
 if not os.path.exists(args.output):
     os.mkdir(args.output)
 
-#Save all the outputs
+#Save all the output dataframes
 out_base_name=args.output+"/"+os.path.basename(args.input[:-4])
-results["df"].to_csv(out_base_name+"_coded.csv",index=False)
-results["df_editable"].to_csv(out_base_name+"_coded_editable.csv",index=False)
-results["df_group_summary"].to_csv(out_base_name+"_group_summary.csv",index=False)
-results["df_validate"].to_csv(out_base_name+"_human-gpt-comparison.csv",index=False)
+results["df"].to_csv(out_base_name+"_coded.csv",index=False,encoding = args.encoding)
+results["df_editable"].to_csv(out_base_name+"_coded_editable.csv",index=False,encoding = args.encoding)
+results["df_group_summary"].to_csv(out_base_name+"_group_summary.csv",index=False,encoding = args.encoding)
+results["df_validate"].to_csv(out_base_name+"_human-gpt-comparison.csv",index=False,encoding = args.encoding)
 open(out_base_name+"_prompt.txt", "w").write(results["prompt"])
+
+# Visualize code embeddings
+
+import plotly.express as px
+import textwrap
+df_vis = pd.DataFrame()
+df_vis["Hover"] = results["df_editable"]["code"]
+df_vis.reset_index()
+for i in range(df_vis.shape[0]):
+    text=results["df_editable"].loc[i,"text_1"]
+    text="</br>".join(textwrap.wrap(text,width=60))
+    df_vis.loc[i,"Hover"]=df_vis.loc[i,"Hover"] + "</br></br>" + "\"" + text + "\""
+
+df_vis["Size"] = (results["df_editable"]["code_count"] / results["df_editable"]["code_count"].max()).to_list()
+df_vis["x"] = results["df_editable"]["code_2d_0"]
+df_vis["y"] = results["df_editable"]["code_2d_1"]
+fig = px.scatter(df_vis, x="x", y="y", size="Size", hover_name="Hover", width=1000, height=1000, title="")
+fig.write_html(out_base_name+"_codes_visualized.html")
+

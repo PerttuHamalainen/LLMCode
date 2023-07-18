@@ -108,6 +108,8 @@ def code(prompt_base,gpt_model,df,column_to_code="texts",use_cache=True,verbose=
     N = len(texts)
     for i in range(0, N, batch_size):
         printProgressBar(i, N)
+        if verbose:
+            print(f"Coding texts {i}:{min([N, i + batch_size])} of total {N}")
         prompt_batch=prompts[i:min([N, i + batch_size])]
         response = openai.Completion.create(
             model=gpt_model,
@@ -230,7 +232,7 @@ def embed(texts,use_cache=True,model="text-embedding-ada-002"):
     return embed_matrix
 
 
-def reduce_embedding_dimensionality(embeddings,num_dimensions,method="UMAP",use_cache=True):
+def reduce_embedding_dimensionality(embeddings,num_dimensions,method="UMAP",use_cache=True,n_neighbors=None):
     if isinstance(embeddings,list):
         #embeddings is a list of embedding matrices => pack all to one big matrix for joint dimensionality reduction
         all_emb = np.concatenate(embeddings, axis=0)
@@ -245,7 +247,7 @@ def reduce_embedding_dimensionality(embeddings,num_dimensions,method="UMAP",use_
             row += N
         return result
 
-    cache_key=(str(all_emb.tostring())+str(num_dimensions)+method).encode('utf-8')
+    cache_key=(str(all_emb.tostring())+str(num_dimensions)+method+str(n_neighbors)).encode('utf-8')
     if use_cache:
         cached_result=load_cached(cache_key)
         if cached_result is not None:
@@ -273,7 +275,9 @@ def reduce_embedding_dimensionality(embeddings,num_dimensions,method="UMAP",use_
         pca=PCA(n_components=num_dimensions)
         x=pca.fit_transform(all_emb)
     elif method=="UMAP":
-        reducer = umap.UMAP(n_components=num_dimensions,metric='cosine',n_neighbors=5)
+        if n_neighbors is None:
+            n_neighbors=5
+        reducer = umap.UMAP(n_components=num_dimensions,metric='cosine',n_neighbors=n_neighbors)
         x=reducer.fit_transform(all_emb)
     else:
         raise Exception("Invalid dimensionality reduction method!")
@@ -290,7 +294,7 @@ def set_cache_directory(dir):
     global cache_dir
     cache_dir=dir
 
-def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-001",min_group_size=3,max_group_emb_codes=100,group_desc_codes=2,group_desc_freq=True,grouping_dim=5,use_cache=True):
+def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-001",min_group_size=3,max_group_emb_codes=100,group_desc_codes=2,group_desc_freq=True,grouping_dim=5,use_cache=True,dimred_method=None):
     """
     Combines codes to groups/themes using HDBSCAN clustering of GPT-3 embedding vectors for each code.
 
@@ -330,6 +334,9 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
         Note that if you want to view or list subsets of the results, e.g., the codes for each original text,
         this is easy to do by using Pandas drop_duplicates() on a suitable column such as "text_id"
     """
+    if dimred_method is None:
+        dimred_method="UMAP"
+
     df=df.copy() #will be modified to contain the results
 
     # extract individual codes
@@ -355,27 +362,14 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
     embeddings=embed(codes_with_context,model=embedding_model,use_cache=use_cache)
     embed_dim=embeddings.shape[1]
 
-    '''
-    print("Reducing embedding dimensionality for visualization")
-    embeddings_2d = llmcode.reduce_embedding_dimensionality(embeddings,2,method="UMAP")
-    
-    # Visualize embeddings: Do similar topics form clusters that we could merge? Apparently: Yes, but automatic clustering is not fully reliable.
-    import plotly.express as px
-    
-    # Visualize
-    df_vis = pd.DataFrame()
-    df_vis["Hover"] = codes
-    df_vis["Size"] = np.array(counts) / max(counts)  # size proportional to count
-    df_vis["x"] = embeddings_2d[:, 0]
-    df_vis["y"] = embeddings_2d[:, 1]
-    fig = px.scatter(df_vis, x="x", y="y", size="Size", hover_name="Hover", width=1000, height=1000, title="")
-    fig.write_html(f"results/codes_visualized.html")
-    fig.show()
-    '''
+
+    print("Reducing embedding dimensionality to 2D for visualization")
+    dimred_neighbors=min_group_size+2 #heuristic: for the grouping to work, dimensionality reduction needs to consider a somewhat larger neighborhood
+    embeddings_2d = reduce_embedding_dimensionality(embeddings,2,use_cache=use_cache,method=dimred_method,n_neighbors=dimred_neighbors)
 
     #reduce dimensionality
     print("Reducing embedding dimensionality for grouping...")
-    embeddings_reduced=reduce_embedding_dimensionality(embeddings, grouping_dim, method="UMAP",use_cache=use_cache)
+    embeddings_reduced=reduce_embedding_dimensionality(embeddings, grouping_dim, method=dimred_method,use_cache=use_cache,n_neighbors=dimred_neighbors)
 
     #group (UMAP + HDBSCAN)
     print("Grouping...")
@@ -383,27 +377,15 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
 
     if clustering_method=="hdbscan":
          import hdbscan
-         do_repeat=False
-         if do_repeat:
-             def inverse_repeat(a, repeats, axis):
-                 #if isinstance(repeats, int):
-                 #    indices = np.arange(a.shape[axis] / repeats, dtype=np.int) * repeats
-                 #else:  # assume array_like of int
-                 #    indices = np.cumsum(repeats) - 1
-                 indices = np.cumsum(repeats) - 1
-                 return a.take(indices, axis)
-
-             repeated=np.repeat(embeddings_reduced,axis=0,repeats=code_counts)
-             cluster = hdbscan.HDBSCAN(min_cluster_size=min_group_size,
-                                       metric='euclidean',
-                                       cluster_selection_method='eom').fit(repeated)
+         cluster = hdbscan.HDBSCAN(min_cluster_size=min_group_size,
+                                   metric='euclidean',
+                                   cluster_selection_method='eom').fit(embeddings_reduced)
+         if np.min(cluster.labels_)<0:
+             has_outliers=True
              labels=cluster.labels_+1  #+1 because the outlier cluster has id -1, which we now map to 0 to make indexing easier
-             labels=inverse_repeat(np.array(labels),code_counts,axis=0)
          else:
-             cluster = hdbscan.HDBSCAN(min_cluster_size=min_group_size,
-                                       metric='euclidean',
-                                       cluster_selection_method='eom').fit(embeddings_reduced)
-             labels=cluster.labels_+1  #+1 because the outlier cluster has id -1, which we now map to 0 to make indexing easier
+             has_outliers = False
+             labels=cluster.labels_
 
     elif clustering_method=="k-means":
          from sklearn.cluster import KMeans
@@ -425,6 +407,8 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
 
     df["group_id"]=0
     df["code_id"]=-1
+    df["code_2d_0"]=0
+    df["code_2d_1"]=0
     for code_id,code in enumerate(codes):
          #group label for this code
          group_id=labels[code_id]
@@ -435,6 +419,8 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
               groups[group_id]+=', '+codes[code_id]
          df.loc[df["code"] == code,"group_id"]=group_id
          df.loc[df["code"] == code,"code_id"]=code_id
+         df.loc[df["code"] == code,"code_2d_0"]=embeddings_2d[code_id,0]
+         df.loc[df["code"] == code,"code_2d_1"]=embeddings_2d[code_id,1]
 
     #Update the various group stats and descriptors
     df["group_codes"]=""
@@ -456,12 +442,8 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
         if len(code_ids)>max_group_emb_codes:
             code_ids=code_ids[:max_group_emb_codes]
         weights=code_counts[code_ids]
-        if np.sum(weights)==0:
-            print("Weights sum to 0, shape", weights.shape)
-            print("Number of groups",n_groups)
-            weights=np.ones_like(weights) #TODO: this should never be needed => find out why the code counts can be 0
         group_embeddings[i]=np.average(embeddings[code_ids],axis=0,weights=weights)
-        group_embeddings[i]/=np.linalg.norm(group_embeddings[i])
+        group_embeddings[i]/=np.linalg.norm(group_embeddings[i])+1e-10
 
         #codes sorted by distance from the group embedding
         all_code_embeddings=embeddings[group_code_ids[i]]
@@ -487,7 +469,7 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
     outliers=None
     df["outlier"]=0
     df["not_outlier"]=1 #just to make sorting easier
-    if clustering_method=="hdbscan":
+    if clustering_method=="hdbscan" and has_outliers:
         df.loc[df["group_id"]==0,"outlier"]=1
         df["not_outlier"] = 1-df["outlier"]
         '''
@@ -502,7 +484,7 @@ def group_codes(df,embedding_context="",embedding_model="text-similarity-curie-0
     #Sort
     df.sort_values(by=["not_outlier","group_count","group_codes","count", "code"], inplace=True, ascending=False)
 
-    return {"df":df,"embeddings":embeddings,"embeddings_reduced":embeddings_reduced,"group_embeddings":group_embeddings,"group_code_ids":group_code_ids,"n_groups":n_groups,"code_counts":code_counts}
+    return {"df":df,"embeddings":embeddings,"embeddings_reduced":embeddings_reduced,"embeddings_2d":embeddings_2d,"group_embeddings":group_embeddings,"group_code_ids":group_code_ids,"n_groups":n_groups,"code_counts":code_counts}
 
 
 
@@ -559,7 +541,8 @@ def code_and_group(df,
                    min_group_size=3,
                    grouping_dim=5,
                    use_cache=True,
-                   verbose=False):
+                   verbose=False,
+                   dimred_method=None):
     if embedding_context is None:
         embedding_context=""
 
@@ -611,7 +594,8 @@ def code_and_group(df,
                              use_cache=use_cache,
                              group_desc_codes=3,
                              grouping_dim=grouping_dim,
-                             group_desc_freq=False)
+                             group_desc_freq=False,
+                             dimred_method=dimred_method)
 
     # Create and print a summary of groups
     df_grouped=group_info["df"].copy()
@@ -646,7 +630,10 @@ def code_and_group(df,
                 new_row["group_desc"]=code_data["group_desc"].iloc[0]
                 new_row["group_count"]=code_data["group_count"].iloc[0]
                 new_row["code"]=c
-                new_row["code_count"]=code_data["count"].iloc[0]
+                new_row["code_count"]=int(code_data["count"].iloc[0])
+                new_row["code_2d_0"]=code_data["code_2d_0"].iloc[0]
+                new_row["code_2d_1"] = code_data["code_2d_1"].iloc[0]
+
                 for c in range(code_data.shape[0]):
                     new_row[f"text_{c+1}"]=code_data[column_to_code].iloc[c]
                 new_row=pd.Series(data=new_row).to_frame().T
@@ -654,6 +641,7 @@ def code_and_group(df,
                     df_editable=new_row
                 else:
                     df_editable=pd.concat(objs=[df_editable,new_row],axis=0,ignore_index=True)
+    df_editable.reset_index()
 
     # Return a dict with all the info the caller might need for further analysis or data export
     result=group_info.copy()
