@@ -61,91 +61,168 @@ def cache(key,value):
     pickle.dump({"key":key,"value":value},open(cached_name,"wb"))
 
 
-def code(prompt_base,gpt_model,df,column_to_code="texts",use_cache=True,verbose=False,max_tokens=64, shuffle=True, random_seed=None, delimiter="###"):
-    result=df.copy()
-    result["text_id"]=list(range(0, result.shape[0]))
+#Construct a coding prompt for a single text (unit of analysis)
+def construct_prompt(coding_instruction,few_shot_texts,few_shot_codes,codes_so_far,text):
+    # The prompt always starts with the user-defined coding instruction
+    prompt = coding_instruction + "\n\n"
 
-    #construct prompts
-    texts=df[column_to_code].astype(str).tolist()
-    prompt_base_clean = prompt_base.rstrip(" \n") #to avoid human errors (easy to accidentally add a trailing space or newline)
+    # Next, we optionally add all the codes created so far, to allow code reuse instead of creating redundant
+    # new and only slightly different codes for new coded texts
+    if (codes_so_far is not None) and len(codes_so_far)>0:
+        if len(codes_so_far)>0:
+            prompt += "Examples of codes to use. Please add new codes when needed:\n"
+            # Shuffle codes to mitigate LLM recency bias
+            codes_so_far=codes_so_far.copy()
+            random.shuffle(codes_so_far)
+            # Add each code as a new line
+            for code in codes_so_far:
+                prompt+=code+"\n"
 
-    # if shuffle flag has been set, shuffle the prompts
-    if shuffle:
-        # separate the prompts at '###' delimiter
-        splits = [split for split in prompt_base_clean.split(delimiter)]
+    # Next, we add the few-shot examples separated by ###
+    # We first shuffle the examples to mitigate LLM recency bias
+    l = list(zip(few_shot_texts, few_shot_codes))
+    random.shuffle(l)
+    few_shot_texts, few_shot_codes = zip(*l)
+    for i in range(len(few_shot_texts)):
+        prompt+="\n\n###\n\nText: "+few_shot_texts[i]+"\n\n"+"Codes: "+few_shot_codes[i]
 
-        # separate the starting and ending of the prompt which is
-        # unique. It holds the instructions for GPT and completion
-        # statement respectively
-        prompt_start = splits.pop(0)
-        prompt_ending = splits.pop()
+    # Finally, we add the text to code, suggesting the LLM that it should continue the prompt with the codes
+    prompt+="\n\n###\n\nText: "+text+"\n\n"+"Codes:"
+    return prompt
 
-        # performs the shuffle
-        random.shuffle(splits)
 
-        # reconstruct the prompt by adding the starting, ending
-        # and the delimiter
-        randomized_prompt = delimiter.join(splits)
-        prompt_base_clean = prompt_start + delimiter + randomized_prompt + delimiter + prompt_ending
+# Extract a string of codes (separated by semicolons) from LLM continuation
+def continuation_to_code_string(continuation):
+    stopseq="###"
+    continuation = continuation.split(stopseq)[
+        0]  # if the model started generating new texts, only keep the continuation
+    continuation = continuation.lstrip(" \n")  # strip leading spaces and newlines
+    continuation = continuation.rstrip(" ;\n")  # strip trailing spaces, semicolons and newlines
+    return continuation
 
-    suffix="\n\nCodes:"
-    prompts=[prompt_base_clean + " " + text + suffix for text in texts]
+# Queries an LLM for continuations of a batch of prompts given as a list
+def query_LLM(model, prompt_batch):
+    # OpenAI API query
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    response = openai.Completion.create(
+        model=model,
+        prompt=prompt_batch,
+        temperature=0.0,  # in this use case we prefer to get the single max prob continuation
+        max_tokens=64,
+        top_p=1.0,  # get the most probable topic
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        n=1  # one completion per prompt
+    )
+
+    # extract continuations
+    continuations = [response["choices"][i]["text"] for i in range(len(prompt_batch))]
+    return continuations
+
+# Convert from a string representation of multiple codes to a list
+def codes_to_string(codes):
+    return "; ".join(codes)
+
+# Convert list of codes to a single string
+def string_to_codes(s):
+    codes = s.split(";")
+    codes = [t.strip() for t in codes]
+    return codes
+
+#Code a list of texts using an instruction string and few-shot examples of texts and codes
+def code_texts(coding_instruction,few_shot_texts,few_shot_codes,improve_coherence,gpt_model,texts,use_cache=True,verbose=False):
+    #For improved consistency, we may code the texts one at a time instead of in batches, adding the already created codes
+    #to the prompts for each new text
+    if improve_coherence:
+        # Placeholder for results
+        result_codes=[]
+
+        # First, add the few-shot example codes to the codes_so_far list
+        codes_so_far=[]
+        for code_string in few_shot_codes:
+            codes_so_far += string_to_codes(code_string)
+        codes_so_far=list(set(codes_so_far)) # Remove duplicates
+
+        # For each coded text: construct prompt, query LLM if result not in cache, extract codes from LLM output,
+        # update the list of codes created so far, and update the results
+        for i in range(len(texts)):
+            text=texts[i]
+            prompt=construct_prompt(coding_instruction=coding_instruction,
+                                    few_shot_texts=few_shot_texts,
+                                    few_shot_codes=few_shot_codes,
+                                    codes_so_far=codes_so_far,
+                                    text=text)
+            if verbose and i == len(texts)-1:
+            #if i == len(texts) - 1:
+                print("Example of a constructed prompt: ")
+                print(prompt)
+
+            code_string=None
+            cache_key = (gpt_model + prompt).encode('utf-8')
+            if use_cache:
+                code_string = load_cached(cache_key)
+            #if i==0:
+            #    print("Cache key:",cache_key)
+            #    print("Cache hash:",cache_hash(cache_key))
+            #    exit()
+            if code_string is None:
+                continuation=query_LLM(gpt_model,[prompt])[0] #the brackets because query_LLM expects a list of prompts
+                code_string=continuation_to_code_string(continuation)
+                cache(key=cache_key, value=code_string)
+            else:
+                print("Loaded coding result from cache")
+
+            result_codes.append(code_string)
+
+            codes_so_far += string_to_codes(code_string)
+            codes_so_far = list(set(codes_so_far))  # Remove duplicates
+
+            printProgressBar(i+1, len(texts))
+
+        return result_codes
+
+    #If we don't care about code consistency, we can speed things up by coding batches of texts in parallel.
+    #First, we construct the prompts for all coded texts
+    prompts=[]
+    for text in texts:
+        prompts.append(construct_prompt(coding_instruction=coding_instruction,
+                            few_shot_texts=few_shot_texts,
+                            few_shot_codes=few_shot_codes,
+                            codes_so_far=None,
+                            text=text))
     if verbose:
         print(f"Constructed {len(prompts)} prompts, example: {prompts[-1]}")
 
-    #call OPENAI API if results not in cache
+    #Return cached results if available
     cache_key=gpt_model.join(prompts).encode('utf-8')
     if use_cache:
         cached_codes=load_cached(cache_key)
         if cached_codes is not None:
-            cached_codes = [c.rstrip(";") for c in cached_codes]  # a bit of clean-up, applied here to avoid having to recompute cached results
+            cached_codes = [c.rstrip(";") for c in cached_codes]  # a bit of clean-up, applied here to avoid having to recompute cached results from legacy code
             print("Loaded coding results from cache, hash ",cache_hash(cache_key))
-            result["codes"]=cached_codes
-            return result
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+            return cached_codes
+
+    #Query the LLM in batches
     continuations=[]
     batch_size = 20  # OpenAI only allows this many continuations in a single batch
     N = len(texts)
     for i in range(0, N, batch_size):
-        printProgressBar(i, N)
         if verbose:
             print(f"Coding texts {i}:{min([N, i + batch_size])} of total {N}")
         prompt_batch=prompts[i:min([N, i + batch_size])]
-        response = openai.Completion.create(
-            model=gpt_model,
-            prompt=prompt_batch,
-            temperature=0.0,  #in this use case we prefer to get the single max prob continuation
-            max_tokens=max_tokens,
-            top_p=1.0,        #get the most probable topic
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-            n=1 #one completion per prompt
-        )
-
-        #extract continuations
-        continuations+=[response["choices"][i]["text"] for i in range(len(prompt_batch))]
+        continuations+=query_LLM(model=gpt_model,prompt_batch=prompt_batch)
+        printProgressBar(min([N, i + batch_size]), N)
 
     print("")
 
-    # extract code from continuation
-    def continuationToCode(continuation):
-        stopseq="###"
-        continuation = continuation.split(stopseq)[
-            0]  # if the model started generating new texts, only keep the continuation
-        continuation = continuation.lstrip(" \n")  # strip leading spaces and newlines
-        continuation = continuation.rstrip(" ;\n")  # strip trailing spaces, semicolons and newlines
-        return continuation
-    codes=[continuationToCode(c) for c in continuations]
+    # Extract code strings from the LLM continuations
+    result_codes=[continuation_to_code_string(c) for c in continuations]
     if use_cache:
-        cache(cache_key,codes)
-    result["codes"] = codes
-    return result
+        cache(key=cache_key,value=result_codes)
+    return result_codes
 
-    #df=pd.DataFrame()
-    #df["texts"]=texts
-    #df["codes"]=codes
-    #df["codes"]=df["codes"].astype(str)
-    #return df
+
+
 
 def extract_single_codes(df,multiple_column="codes",single_column="code",count_column="count",id_column="code_id",merge_singular_and_plural=True):
     df=df.copy()  #will be modified to contain the contents
@@ -542,30 +619,32 @@ def code_and_group(df,
                    grouping_dim=5,
                    use_cache=True,
                    verbose=False,
-                   dimred_method=None):
+                   dimred_method=None,
+                   pruned_code=None,
+                   improve_coherence=True):
     if embedding_context is None:
         embedding_context=""
 
-    #Construct the coding prompt in the legacy format expected by the code() method.
-    #TODO: remove this redundancy
-    prompt_base=coding_instruction
-    few_shot_codes = df.loc[df['use_as_example'] == 1, 'human_codes'].tolist()
-    few_shot_texts = df.loc[df['use_as_example'] == 1, column_to_code].tolist()
-    for i in range(len(few_shot_codes)):
-        prompt_base+="\n\n###\n\nText: "+few_shot_texts[i]+"\n\n"+"Codes: "+few_shot_codes[i]
-    prompt_base+="\n\n###\n\nText: "
-
 
     #Code
-    df_coded = code(prompt_base=prompt_base,
-                      gpt_model=coding_model,
-                      df=df,
-                      column_to_code=column_to_code,
-                      use_cache=use_cache,
-                      verbose=verbose)
+    print(f"Coding the {column_to_code} column of the dataframe")
+    texts = df[column_to_code].astype(str).tolist()
+    few_shot_codes = df.loc[df['use_as_example'] == 1, 'human_codes'].astype(str).tolist()
+    few_shot_texts = df.loc[df['use_as_example'] == 1, column_to_code].astype(str).tolist()
+    codes = code_texts(coding_instruction=coding_instruction,
+                       few_shot_texts=few_shot_texts,
+                       few_shot_codes=few_shot_codes,
+                       improve_coherence=improve_coherence,
+                       gpt_model=coding_model,
+                       texts=texts,
+                       use_cache=use_cache,
+                       verbose=verbose)
+    df_coded=df.copy()
+    df_coded["codes"]=codes
+    df_coded["text_id"]=list(range(0, len(texts)))
 
     print("\nCoding instruction:\n\n")
-    print(prompt_base.split("###")[0])
+    print(coding_instruction)
 
     print("Coded data:")
     df_coded.reset_index(drop=True,inplace=True) #for cleaner printouts
@@ -583,8 +662,15 @@ def code_and_group(df,
     df_single = df_single.drop_duplicates(subset=["code"])  # only print one text per code
     df_single.reset_index(drop=True,inplace=True) #for cleaner printouts
     df_code_summary=df_single[[column_to_code, "code", "count"]]
-    print("\nCodes sorted by code frequency:")
-    print(df_code_summary.head(20))
+    print("Total number of codes: ",df_single.shape[0])
+    print("\nCodes sorted by number of groundings:")
+    print(df_code_summary.head(df_code_summary.shape[0]))
+
+    # Prune codes, if a pruning code specified
+    df_coded_not_pruned=df_coded.copy()
+    if pruned_code is not None:
+        df_coded=df_coded[~df_coded["codes"].str.contains(pruned_code)]
+        df_coded.reset_index(inplace=True)
 
     # Group codes
     group_info = group_codes(df_coded,
@@ -645,8 +731,14 @@ def code_and_group(df,
 
     # Return a dict with all the info the caller might need for further analysis or data export
     result=group_info.copy()
-    result["prompt"]=prompt_base
-    result["df_coded"]=df_coded
+    result["prompt"]=construct_prompt(
+        coding_instruction=coding_instruction,
+        few_shot_texts=few_shot_texts,
+        few_shot_codes=few_shot_codes,
+        codes_so_far=None,
+        text=texts[0]
+    )
+    result["df_coded"]=df_coded_not_pruned
     result["df_validate"]=df_cmp
     result["df_editable"]=df_editable
     result["df_code_summary"]=df_code_summary
