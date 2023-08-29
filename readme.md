@@ -94,7 +94,7 @@ Below, you can see the 3 Bopp et al. texts with the least human-like codes outpu
 
 ![](images/human-gpt-comparison.png "Worst case coding results")
 
-Although the [full .csv](./test_results/bopp_test_human-gpt-comparison.csv) shows that the majority of codes are of high quality, the image above reveals that there are also errors such as the LLM missing the categorical "games are art" statement. Then again, the middle response is more thoroughly coded by the LLM, whereas the human coder missed some points made in the long answer. The human coder might have been tired, whereas the LLM looks at each text with "fresh eyes".
+Although the [full .csv](./test_results/bopp_test_human-llm-comparison.csv) shows that the majority of codes are of high quality, the image above reveals that there are also errors such as the LLM missing the categorical "games are art" statement. Then again, the middle response is more thoroughly coded by the LLM, whereas the human coder missed some points made in the long answer. The human coder might have been tired, whereas the LLM looks at each text with "fresh eyes".
 
 
 ### Improving Code Quality
