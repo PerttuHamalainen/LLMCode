@@ -18,7 +18,7 @@ In particular, LLMCode is designed to assist a researcher in the first 3 stages 
 
 *1. Familiarizing yourself with the data:* Using LLMCode, you need to go through your data until you can come up with a coding scheme/style and some initial examples.  
 
-*2. Generating initial codes:* You need to provide around 10 pairs of example texts and codes. LLMCode will extrapolate from these to code the rest.
+*2. Generating initial codes:* You need to provide around 10 pairs of example texts and codes. LLMCode will extrapolate from these to code the rest. Optionally, you can code more data manually, which LLMCode will use to evaluate the AI coding quality.
 
 *3. Searching for themes:* LLMCode can group codes into initial groups or themes. This can be done automatically or based on human-defined examples.
 
@@ -44,9 +44,11 @@ If you have Anaconda installed, you can run the following commands from the Anac
 
 ### Data Preparation
 
-To use LLMCode, you should first format your data as a .csv like this example ([example data file](./test_data/bopp_test.csv)):
+To use LLMCode, you should first format your data as a .csv or .xlsx like this [example file](./test_data/bopp_test.csv):
 
 *	The texts to code (e.g., sentences or paragraphs) are in a single column, one text per row.
+* The first cell of the "coding_instructions" column contains freeform coding instructions, typically explaining the context and goals of the analysis, and what the codes represent.
+* The first cell of the "grouping_instructions" column contains freeform instructions for grouping the codes into themes.
 * A ”human_codes” column contains human-created example codes for at least some of the texts. These are used for specifying the coding style and also for analyzing code quality. If a text is assigned multiple codes, these should be separated by semicolons.
 * A "use_as_example” column contains "1" for the human codes that specify the coding style, and is empty otherwise. We recommend using between 10 and 20 examples. More examples is better, but as these are added to a coding prompt for each coded text, the OpenAI API cost scales proportional to the number of examples. Too many examples may also make the prompt exceed the used LLM's context size limit.
 * A "human_themes" column contains themes for the coding examples. These are optional and do not have to be specified for each example.
@@ -111,7 +113,7 @@ If the coding errors are not acceptable for you, you can try the following:
 
 An initial version of the coding and grouping is described as part of Experiment 3 of the [CHI 2023 paper](https://dl.acm.org/doi/abs/10.1145/3544548.3580688). In brief, we first prompted the LLM with few-shot examples to perform the coding, computed LLM embedding vectors of the codes, reduced the dimensionality of the vectors using UMAP and then clustered the low-dimensional vectors using HDBSCAN.
 
-However, as the dimensionality reduction and clustering were sensitive to various hyperparameters and sometimes produced unpredictable results, we have now moved on to producing the themes through prompting, based on user-defined examples.
+However, as the dimensionality reduction and clustering are sensitive to various hyperparameters and clustering may sometimes group together concepts that are quite distinct, we have now moved on to producing the themes through prompting, based on user-defined examples.
 
 Compared to the paper, this repository also adds the code quality evaluation and randomly shuffles the few-shot examples for each coded text, to reduce the recency bias common in LLMs.
 
