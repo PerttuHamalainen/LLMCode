@@ -68,6 +68,7 @@ def cache(key,value):
 tiktoken_encodings = {
     "gpt-4": tiktoken.get_encoding("cl100k_base"),
     "gpt-3.5-turbo": tiktoken.get_encoding("cl100k_base"),
+    "gpt-3.5-turbo-instruct": tiktoken.get_encoding("cl100k_base"),
     "gpt-3.5-turbo-16k": tiktoken.get_encoding("cl100k_base"),
     "text-davinci-003": tiktoken.get_encoding("p50k_base"),
     "text-davinci-002": tiktoken.get_encoding("p50k_base"),
@@ -85,6 +86,7 @@ max_llm_context_length = {
     "gpt-3.5-turbo-16k": 16384,
     "gpt-4": 8192,
     "gpt-3.5-turbo": 4096,
+    "gpt-3.5-turbo-instruct": 4096,
     "text-davinci-003": 4096,
     "text-davinci-002": 4096,
     "text-davinci-001": 2049,
@@ -97,8 +99,11 @@ max_llm_context_length = {
     "ada": 2049
 }
 
+def is_chat_model(model):
+    return ("gpt-4" in model) or ("gpt-3.5-turbo" in model) and ("gpt-3.5-turbo-instruct" not in model)
+
 def token_overhead(model):
-    if ("gpt-4" in model) or ("gpt-3.5-turbo" in model):
+    if is_chat_model(model):
         return 300 #these models have some overhead because of the system message and chat structure
     return 0
 
@@ -159,8 +164,9 @@ def query_LLM(model, prompt_batch, max_tokens, use_cache):
         if cached_result is not None:
             return cached_result
 
-    #gpt-4 and gpt-3.5-turbo models require using the chat completion API
-    if ("gpt-4" in model) or ("gpt-3.5-turbo" in model):
+    #choose whether to use the chat API or the older query API (the latter is a better fit for data coding,
+    #but GPT-4 series of models is only available via former)
+    if is_chat_model(model):
         system_message = "You are a helpful assistant that continues the text given by the user."
 
         # each batch in the prompt becomes its own asynchronous chat completion request

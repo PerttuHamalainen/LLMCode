@@ -6,13 +6,15 @@ Here's an example of the codes and themes created by LLMCode for text data about
 Currently, we only support OpenAI models via the OpenAI API (not GDPR-compliant!), but support for open and locally run models such as Llama 2 is in the works.
 
 ### Executive Summary
-**LLMCode codes and analyzes a dataset of texts based on human-created example codes and themes.** Traditional qualitative content analysis and thematic analysis can very labor-intensive, and our goal is to enable extending such analyses to **large-scale data** such as online discussions. At the same time, we prioritize maintaining **researcher agency and control**.
+**LLMCode codes and analyzes a dataset of texts based on human-created example codes and themes.** Traditional qualitative content analysis and thematic analysis can very labor-intensive, and our goal is to enable extending such analyses to **large-scale data** such as online discussions. At the same time, we prioritize maintaining **researcher agency and control**. LLMCode can also be considered to implement **topic modeling** but in a way that brings it closer to manual qualitative analysis.
 
-For instance, the codes might summarize open-ended question answers. In a study about why people experience games as art (the .gif above), an example answer and codes might be:
+For instance, in a study about why people experience games as art (the .gif above), the codes might be concise summaries of the reasons given in open-ended answers:
 
-Text: *A group of people took time and effort in making this area of the game, Kaer Morhen (and honestly most of the game too, the experience was simply more profound here), so beautiful. It was akin to looking at a photographer's work and wanting to physically visit where the picture was taken.*  
+Answer: *A group of people took time and effort in making this area of the game, Kaer Morhen (and honestly most of the game too, the experience was simply more profound here), so beautiful. It was akin to looking at a photographer's work and wanting to physically visit where the picture was taken.*  
 
 Codes: *effort invested in making the game; beauty*
+
+After coding, the codes might then be grouped into broader categories or topics for further analysis and reporting.
 
 In particular, LLMCode is designed to assist a researcher in the first 3 stages of the thematic analysis process of [Braun & Clarke](https://biotap.utk.edu/wp-content/uploads/2019/10/Using-thematic-analysis-in-psychology-1.pdf.pdf):
 
@@ -25,14 +27,29 @@ In particular, LLMCode is designed to assist a researcher in the first 3 stages 
 The results are saved in as a .csv that allows easy editing and refinement by a human researcher using spreadsheet tool such as Google Sheets (see below for details). A custom visual editing interface is also in the works.
 
 
-### Installing
-Download the repository, navigate to its root folder in a command line window, and run:
+### How to install and use
+#### Step 1: Setup an OpenAI account
+1. Create an OpenAI account at [https://platform.openai.com](https://platform.openai.com).
+2. Go to the account management page
+3. Choose "Billing" and buy a fixed amount of usage (at least 1€) or setup continuous billing with a monthly quota for safety reasons
+4. Choose "API keys" and create an API key. The system gives you a private key that you should store in a safe place, e.g., a password manager
 
-    pip install -r requirements
+*Important info regarding API costs:*
+* LLMCode presently only supports OpenAI LLMs, which means that using it costs money. YOU USE LLMCODE AT YOUR OWN RISK.
+* For instance, the analysis Step 4 below costs approximately 0.5€.
+* To minimize costs, it's good to first test with smaller datasets of up to few hundred entries
+* It is also recommended to use the OpenAI management interface to limit API spend, either by purchasing fixed amounts of credits or defining a monthly quota
+* LLMCode minimizes the costs by caching the LLM API query results. This means that if you code the exact same data again with the same model, instructions, and examples, the results will be returned from the cache. If you need to delete the cache, e.g., to save disk space, you can navigate to where you installed the LLMCode (see below), navigate to the ```LLMCode/llmcode/cache``` folder, and delete the folders. There is one cache folder for each analyzed input data file
 
-You also need to have your OpenAI API key defined using the environment variable OPENAI_API_KEY
 
-If you have Anaconda installed, you can run the following commands from the Anaconda command prompt to install in a custom virtual environment.
+
+#### Step 2: Download and install LLMCode
+
+*Option 1: Using Anaconda (recommended)*
+
+Download and install [Anaconda](https://www.anaconda.com/) and [git](https://git-scm.com/download/win), if you don't already have them.
+
+Open the Anaconda command prompt and run the following commands:
 
     conda create --name llmcode python=3.8
     activate llmcode
@@ -41,8 +58,14 @@ If you have Anaconda installed, you can run the following commands from the Anac
     pip install -r requirements.txt
 
 
+*Option 2: Install without Anaconda*
 
-### Data Preparation
+If you don't have Anaconda but have Python installed, download the repository, navigate to its root folder in a command line window, and run:
+
+    pip install -r requirements
+
+
+#### Step 3: Prepare your data
 
 To use LLMCode, you should first format your data as a .csv or .xlsx like this [example file](./test_data/bopp_test.csv):
 
@@ -56,13 +79,11 @@ To use LLMCode, you should first format your data as a .csv or .xlsx like this [
 Human codes that are not used as examples are used as validation data, for analyzing generated code quality and highlighting where and how the AI codes differ from the human codes.
 
 
-### Coding the Data
+#### Step 4: Run the analysis
 
-Once you have the data formatted correctly, running the coding is easy from the command line, using the [analyze.py](analyze.py) helper. To test using the provided example data, run the following in the repository root folder:
+Once you have the data formatted correctly, running the coding and grouping is easy from the command line, using the [analyze.py](analyze.py) helper. To test using the provided example data, run the following in the repository root folder:
 
     python analyze.py --input test_data/bopp_test.csv --output test_results --column "why_art" --emb_context ", in context of experiencing games as art"
-
-**To minimize API costs, it's best to first try with a small dataset** up to a few hundred of short texts. The last time we checked, the test above cost less than 0.5€.
 
 The arguments used above are:
 
@@ -72,27 +93,31 @@ The arguments used above are:
 
 <code>--column</code> The name of the .csv column containing the texts to code
 
-<code>--emb_context</code> A context string that is appended to each generated code when generating code embeddings. This may help disambiguating codes that would be synonyms outside the specific context. In the example above, we use: ", in context of experiencing games as art"
+<code>--emb_context</code> A context string that is appended to each generated code when computing semantic embedding vectors of the codes. The embedding vectors are used for visualizing the codes and for comparing human and LLM-generated codes. Using the context string may help disambiguating codes that would be synonyms outside the specific context. In the example above, we use: ", in context of experiencing games as art". For example, without this context string, the embeddings for "immersion" and "swimming" are very close to each other, although the concepts have different meanings in this context.
 
 Use <code>python analyze.py --help</code> for info about additional optional arguments.
 
-### Generated Output
+#### Step 5: View the analysis results
+
 [analyze.py](analyze.py) produces a number of output .csv files, prints a summary to the command line window, and also generates an output visualization like the one above. The [test_results](test_results) folder of this repository provides example results using [Bopp et al.](https://osf.io/25ptc/) "Why was this game art?" question responses. Note that the human codes are by us, as Bopp et al. coded multiple questions and responses as a whole.
 
-The main output is a .csv with one theme and code per row, sorted by theme and code frequencies. The coded texts are provided in extra columns to allow easy mapping of codes to raw data and back:
+The output are named by appending the input file name with different suffixes:
+
+* **\<input_file_name\>_codes_grouped.csv**: This is the main output, with one theme and code per row, sorted by theme and code frequencies. The coded texts are provided in extra columns to allow easy mapping of codes to raw data and back, as shown in the screenshot below. The format should allow a human researcher to easily rename themes and move codes under different themes by copy-pasting the table lines.
+* **\<input_file_name\>_codes_visualized.html**: An interactive Plotly visualization of the codes and themes, using the embedding vectors to place semantically similar codes close to each other. You can open this in a browser and use the mouse to browse the data.
+* **\<input_file_name\>_coded.csv**: The input data appended with a new column with the codes
+* **\<input_file_name\>_human-llm-comparison.csv**: Coding quality evaluation results (see the section "Evaluating Code Quality" below)
+* **\<input_file_name\>_prompt.txt**: An example of the exact coding prompt sent to the LLM, including the few-shot examples. This is mainly provided for debug purposes. Note that for each coded text, the order of the examples is shuffled randomly to alleviate the recency bias of LLMs.  
 
 ![](images/editable_result.png "Coding and grouping results, one code per line")
 
-The format should allow a human researcher to easily rename themes and move codes under different themes by copy-pasting the table lines.
-
-The LLM [coding prompt](test_results/bopp_test_prompt.txt) constructed from the coding instructions and few-shot examples is also saved to the output directory, for debugging purposes. Note that for each coded text, the order of the examples is shuffled randomly to alleviate the recency bias of LLMs.  
 
 ### Evaluating Code Quality
 For evaluating code quality using the validation codes, we also produce a .csv that shows the human and LLM codes side-by-side, sorted from most human-like to least human-like. Before carrying out further analyses on a particular dataset, **one should check the least human-like codes to see whether the LLM coding errors are acceptable.**
 
 Here, human-likeness is calculated by treating the embedding vectors of the codes for a specific coded text as high-dimensional point clouds. The LLM and human point clouds are then compared using a Modified Hausdorff cosine distance metric. A distance of 0 means the codes are identical and both the LLM and human coder have assigned the same number of codes to the text.
 
-Below, you can see the 3 Bopp et al. texts with the least human-like codes output by the <code>gpt-3.5-turbo</code> model (our default):
+Below, you can see the 3 Bopp et al. texts with the least human-like codes output by the <code>gpt-3.5-turbo</code> model:
 
 ![](images/human-gpt-comparison.png "Worst case coding results")
 

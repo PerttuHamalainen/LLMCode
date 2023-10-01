@@ -16,7 +16,7 @@ parser.add_argument('--input', type=str, required=True, help="Path to the input 
 parser.add_argument('--pruned_code', type=str, required=False, help="A code that signals the coded text should be pruned from further analysis, e.g., UNSPECIFIED")
 parser.add_argument('--column', type=str, required=True, help="Name of the data column with analyzed texts")
 parser.add_argument('--output', type=str, required=True, help="Output directory name")
-parser.add_argument('--coding_model', type=str, required=False, default="gpt-3.5-turbo", help="LLM model for coding. Currently, only OpenAI models are supported")
+parser.add_argument('--coding_model', type=str, required=False, default="gpt-3.5-turbo-instruct", help="LLM model for coding. Currently, only OpenAI models are supported")
 parser.add_argument('--embedding_model', type=str, required=False, default="text-similarity-curie-001", help="LLM model embedding. Currently, only OpenAI models are supported")
 parser.add_argument('--emb_context', type=str, required=False, default="", help="A context string that is added after each code when computing code embedding vectors")
 parser.add_argument('--use_cache', type=bool, required=False, default=True, help="Whether or not to use cached results for LLM operations, which can save OpenAI API usage")
@@ -77,7 +77,6 @@ coding_results=llmcode.code_df(
 out_base_name=args.output+"/"+os.path.basename(input_noext)
 open(out_base_name+"_prompt.txt", "w").write(coding_results["prompt"])
 coding_results["df_coded"].to_csv(out_base_name+"_coded.csv",index=False,encoding = args.encoding)
-coding_results["df_codes"].to_csv(out_base_name+"_codes.csv",index=False,encoding = args.encoding)
 coding_results["df_validate"].to_csv(out_base_name+"_human-llm-comparison.csv",index=False,encoding = args.encoding)
 if args.pruned_code is not None:
     coding_results["df_coded_pruned"].to_csv(out_base_name+"_coded_pruned.csv",index=False,encoding = args.encoding)
