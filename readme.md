@@ -32,7 +32,7 @@ The results are saved in as a .csv that allows easy editing and refinement by a 
 1. Create an OpenAI account at [https://platform.openai.com](https://platform.openai.com).
 2. Go to the account management page
 3. Choose "Billing" and buy a fixed amount of usage (at least 1€) or setup continuous billing with a monthly quota for safety reasons
-4. Choose "API keys" and create an API key. The system gives you a private key that you should store in a safe place, e.g., a password manager
+4. Choose "API keys" and create an API key. The system gives you a private key that you should store in a safe place, e.g., a password manager. See Step 4 below for how to use the stored key.
 
 *Important info regarding API costs:*
 * LLMCode presently only supports OpenAI LLMs, which means that using it costs money. YOU USE LLMCODE AT YOUR OWN RISK.
@@ -81,7 +81,13 @@ Human codes that are not used as examples are used as validation data, for analy
 
 #### Step 4: Run the analysis
 
-Once you have the data formatted correctly, running the coding and grouping is easy from the command line, using the [analyze.py](analyze.py) helper. To test using the provided example data, run the following in the repository root folder:
+Once you have the data formatted correctly, running the coding and grouping is easy from the Anaconda command prompt line, using the [analyze.py](analyze.py) helper.
+
+First, LLMCode needs your OpenAI API key through the OPENAI_API_KEY environment variable. How to set environment variables varies for each operating system. On Windows, you can do this from the Anaconda command prompt as:
+
+    set OPENAI_API_KEY=<your key here>
+
+To test using the provided example data, run the following in the repository root folder, in the same command line window where you set the API key above:
 
     python analyze.py --input test_data/bopp_test.csv --output test_results --column "why_art" --emb_context ", in context of experiencing games as art"
 
