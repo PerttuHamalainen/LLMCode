@@ -60,7 +60,7 @@ def load_cached(key):
 
 def cache(key,value):
     if not os.path.exists(cache_dir):
-        os.mkdir(cache_dir)
+        os.makedirs(cache_dir,exist_ok=True)
     cached_name= cache_dir + "/" + cache_hash(key)
     pickle.dump({"key":key,"value":value},open(cached_name,"wb"))
 

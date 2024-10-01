@@ -42,7 +42,7 @@ if args.random_seed is not None:
 input_noext,input_ext=os.path.splitext(args.input)
 
 # Set LLM query cache directory
-llmcode.set_cache_directory(llmcode.get_cache_directory()+"/"+os.path.basename(input_noext))
+llmcode.set_cache_directory(os.path.join(llmcode.get_cache_directory(),os.path.basename(input_noext)))
 
 # Read inputs
 if input_ext==".csv":
