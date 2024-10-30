@@ -11,15 +11,16 @@ Traditional qualitative content analysis and thematic analysis can very labor-in
 
 Preferences about AI use vary&mdash;LLMCode supports multiple workflows with varying degrees of automation:
 
-- Prefer to do manual analysis? Our data visualization tools might still be useful in immersing oneself in one's data. LLMCode can also be used to check for the consistency of your manual data coding.
+- Prefer to do manual analysis? Our data visualization tools might still be useful in familiarizing oneself with the data. Furthermore, LLMCode can also be used to check for the consistency of your manual data coding.
 - Prefer to do manual analysis but have too much data? Try using LLMCode to highlight or extract relevant text passages to speed up the analysis.
-- Like to do manual analysis, but have limited time or your brain gets fried after enough hours? Code as much data as you can and let LLMCode handle the rest.
-- Are you an industry user researcher looking for quick results? LLMCode can also run automatically based on a few coding examples and produce a report of the key themes, although we do not recommend this for academic research where reliability is paramount.
+- Would like to do manual analysis, but have limited time or your brain gets fried after enough hours? Code as much data as you can and let LLMCode handle the rest, using your hand-coded data for guidance and validation.
+- Are you an industry user researcher looking for quick results? LLMCode can also run automatically based on a few coding examples and produce a report of the key themes.
 
 
 ### How to use
 
-#### Step 1: Setup an OpenAI account if you don't have an Aalto Azure OpenAI API key
+#### Step 1: Setup an OpenAI account if you don't have oneself
+You can also use an Aalto Azure OpenAI API key and skip these steps, although the Aalto API is slower and vanilla OpenAI API is more convenient for trying out the tutorials below.
 1. Create an OpenAI account at [https://platform.openai.com](https://platform.openai.com).
 2. Go to the account management page
 3. Choose "Billing" and buy a fixed amount of usage (at least 1€) or setup continuous billing (with a monthly quota for safety reasons)
@@ -32,14 +33,14 @@ Preferences about AI use vary&mdash;LLMCode supports multiple workflows with var
 * LLMCode minimizes the costs by caching the LLM API query results. This means that if you code the exact same data again with the same model, instructions, and examples, the results will be returned from the cache. If you need to delete the cache, e.g., to save disk space, you can navigate to where you installed the LLMCode (see below), navigate to the ```_LLM_cache``` folder and delete the subfolders.  
 
 
-#### Step 2: Try the notebook interface on Google Colab.
+#### Step 2: Try the notebook interface and tutorials on Google Colab.
 Note: Colab needs a Google account. If you are an Aalto University student or researcher, you can either use a personal account or your Aalto Google account by signing in to Google with your Aalto email.
 
 The notebooks are designed as a series of tutorials with default test data, but you can also swap in and process your own data.
 
-Notebook 1: [Data visualization and exploration](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/data_exploration_and_visualization.ipynb).
+Tutorial 1: [Data visualization and exploration](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/data_exploration_and_visualization.ipynb).
 
-Notebook 2: [Relevant text extraction or highlighting](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/relevant_data_highlighting.ipynb).
+Tutorial 2: [Relevant text extraction or highlighting](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/relevant_data_highlighting.ipynb).
 
 Tutorial 3: [Inductive and deductive coding](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/inductive_and_deductive_coding.ipynb).
 
@@ -62,8 +63,8 @@ Open the Anaconda command prompt and run the following commands:
 The last line should launch the Jupyter notebook interface in your browser. Note that this interface doesn't have Colab's UI functionality and instead of using the sliders and other UI elements, you have to edit the values directly in the code.
 
 
-### Why not just use ChatGPT/GPT-4?
-The most recent LLMs like ChatGPT can conduct a form of qualitative analysis out of the box: Just paste your data to the chat, and ask ChatGPT to identify themes. However, this has two major problems:
+### Why not just use ChatGPT, Claude, or Gemini?
+LLMs like ChatGPT can conduct a form of qualitative analysis out of the box: Just paste your data to the chat, and ask ChatGPT to identify themes. However, this has two major problems:
 
 * All data must fit the maximum context size.
 * Evaluating the quality and correctness of the results is hard. Often, ChatGPT may simply neglect large parts of your data.
@@ -72,16 +73,6 @@ LLMCode addresses the problems above:
 * LLMCode only requires that a single coded text and the coding examples fit the context.
 * LLMCode allows comparing the results to human-annotated data both quantitatively and qualitatively, which helps in both evaluating the severity of the LLM errors. Furthermore, the error analysis often reveals inconsistencies and mistakes in the human-annotations.
 
-
-
-### Todo
-
-* Colab notebook to allow usage without installing anything
-* Interactive visualization and visual editing of the examples, codes, and themes
-* Support for other language models such as Llama 2 — using a local model would mitigate the data protection issues one may have with OpenAI’s models.
-* More thorough validation, once we have enough ground truth codes from multiple human coders
-* Export to Atlas.ti and other qualitative analysis software, to allow more flexible manual refinement
-* Automatic extraction of coded snippets from longer texts.
 
 
 ### Citation 
