@@ -41,7 +41,7 @@ The notebooks are designed as a series of tutorials with default test data, but 
 
 Tutorial 1: [Data visualization and exploration](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/data_exploration_and_visualization.ipynb).
 
-Tutorial 2: [Relevant text extraction or highlighting](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/relevant_data_highlighting.ipynb).
+Tutorial 2: [Relevant text extraction or highlighting](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/relevant_data_extraction.ipynb).
 
 Tutorial 3: [Inductive and deductive coding](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/inductive_and_deductive_coding.ipynb).
 
