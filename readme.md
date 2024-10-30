@@ -1,3 +1,4 @@
+### Executive Summary
 This repository contains the **LLMCode** Python toolkit for **AI-assisted qualitative data analysis and visualization** using Large Language Models (LLMs). This is a further development of the initial version used for the CHI 2023 paper [Evaluating Large Language Models in Generating Synthetic HCI Research Data: a Case Study.](https://dl.acm.org/doi/abs/10.1145/3544548.3580688)
 
 Here's an example of the codes and themes created by LLMCode for text data about experiencing video games as art:
@@ -6,7 +7,7 @@ Here's an example of the codes and themes created by LLMCode for text data about
 Currently, we support OpenAI models via both OpenAI API and Aalto University's Azure OpenAI API. The latter provides better data privacy and is GDPR-safe.
 
 
-### Executive Summary
+### Design principles
 Traditional qualitative content analysis and thematic analysis can very labor-intensive, and our goal is to enable extending such analyses to **large-scale data** such as online discussions. At the same time, we believe that **AI should clean and do the dishes while humans do creative work and research**, not the other way around. Thus, we prioritize **researcher agency and control** by allowing researchers to define and guide the analysis style through manually annotated data such as [this word document](https://raw.githubusercontent.com/PerttuHamalainen/LLMCode/master/test_data/bopp_test_augmented_feelings2.docx) that contains descriptions of artistic video game experiences coded for feelings and emotions they elicit. The more data you annotate manually, the more accurately LLMCode can mimic your annotations and the more reliably you can analyze and quantify LLMCode's output reliability and quality.
 
 Preferences about AI use vary&mdash;LLMCode supports multiple workflows with varying degrees of automation:
