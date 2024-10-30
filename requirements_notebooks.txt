@@ -1,0 +1,14 @@
+umap-learn
+pandas
+openai
+plotly
+hdbscan
+tiktoken
+openpyxl
+httpx
+levenshtein
+lxml
+beautifulsoup4
+rapidfuzz
+titlecase
+markdown-pdf

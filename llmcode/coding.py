@@ -1,119 +1,12 @@
 import random
 import pandas as pd
-import os
-import openai
 import numpy as np
-import pickle
-import hashlib
-import json
-import scipy
-import shutil
-import tiktoken
 import re
-import asyncio
-import time
-from itertools import chain
-from sklearn.neighbors import NearestNeighbors
-
-
-#progress bar helper
-def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        length      - Optional  : character length of bar (Int)
-        fill        - Optional  : bar fill character (Str)
-        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
-    """
-    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filledLength = int(length * iteration // total)
-    bar = fill * filledLength + '-' * (length - filledLength)
-    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
-    # Print New Line on Complete
-    if iteration == total:
-        print()
-
-cache_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"cache")
-
-def cache_keys_equal(key1,key2):
-    if (type(key1) is np.ndarray) and (type(key2) is np.ndarray):
-        return np.array_equal(key1,key2)
-    return key1==key2
-
-def cache_hash(key):
-    return hashlib.md5(key).hexdigest()
-
-def load_cached(key):
-    cached_name= cache_dir + "/" + cache_hash(key)
-    if os.path.exists(cached_name):
-        cached=pickle.load(open(cached_name,"rb"))
-        if cache_keys_equal(cached["key"],key):
-            #cache_copy_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cache_copy") #for debugging which files are actually used...
-            #shutil.copy(cached_name, cache_copy_dir+"/" + cache_hash(key))
-            return cached["value"]
-    return None
-
-def cache(key,value):
-    if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir,exist_ok=True)
-    cached_name= cache_dir + "/" + cache_hash(key)
-    pickle.dump({"key":key,"value":value},open(cached_name,"wb"))
-
-
-tiktoken_encodings = {
-    "gpt-4": tiktoken.get_encoding("cl100k_base"),
-    "gpt-3.5-turbo": tiktoken.get_encoding("cl100k_base"),
-    "gpt-3.5-turbo-instruct": tiktoken.get_encoding("cl100k_base"),
-    "gpt-3.5-turbo-16k": tiktoken.get_encoding("cl100k_base"),
-    "text-davinci-003": tiktoken.get_encoding("p50k_base"),
-    "text-davinci-002": tiktoken.get_encoding("p50k_base"),
-    "text-davinci-001": tiktoken.get_encoding("r50k_base"),
-    "text-curie-001": tiktoken.get_encoding("r50k_base"),
-    "text-babbage-001": tiktoken.get_encoding("r50k_base"),
-    "text-ada-001": tiktoken.get_encoding("r50k_base"),
-    "davinci": tiktoken.get_encoding("r50k_base"),
-    "curie": tiktoken.get_encoding("r50k_base"),
-    "babbage": tiktoken.get_encoding("r50k_base"),
-    "ada": tiktoken.get_encoding("r50k_base"),
-}
-
-max_llm_context_length = {
-    "gpt-3.5-turbo-16k": 16384,
-    "gpt-4": 8192,
-    "gpt-3.5-turbo": 4096,
-    "gpt-3.5-turbo-instruct": 4096,
-    "text-davinci-003": 4096,
-    "text-davinci-002": 4096,
-    "text-davinci-001": 2049,
-    "text-curie-001": 2049,
-    "text-babbage-001": 2049,
-    "text-ada-001": 2049,
-    "davinci": 2049,
-    "curie": 2049,
-    "babbage": 2049,
-    "ada": 2049
-}
-
-def is_chat_model(model):
-    return ("gpt-4" in model) or ("gpt-3.5-turbo" in model) and ("gpt-3.5-turbo-instruct" not in model)
-
-def token_overhead(model):
-    if is_chat_model(model):
-        return 300 #these models have some overhead because of the system message and chat structure
-    return 0
-
-def num_tokens_from_string(string: str, model: str) -> int:
-    """Returns the number of tokens in a text string."""
-    if not model in tiktoken_encodings:
-        raise Exception(f"Tiktoken encoding unknown for LLM: {model}")
-    encoding = tiktoken_encodings[model]
-    num_tokens = len(encoding.encode(string))
-    return num_tokens
+from Levenshtein import distance
+from collections import defaultdict
+from rapidfuzz import fuzz
+from .llms import query_LLM, embed, reduce_embedding_dimensionality, print_progress_bar
+from .embeddings import *
 
 #Construct a coding prompt for a single text (unit of analysis)
 def construct_prompt(coding_instruction,few_shot_texts,few_shot_codes,codes_so_far,text):
@@ -155,75 +48,6 @@ def continuation_to_code_string(continuation):
     return continuation
 
 
-# Queries an LLM for continuations of a batch of prompts given as a list
-def query_LLM(model, prompt_batch, max_tokens, use_cache):
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    cache_key=model.join(prompt_batch).encode('utf-8')
-    if use_cache:
-        cached_result=load_cached(cache_key)
-        if cached_result is not None:
-            return cached_result
-
-    #choose whether to use the chat API or the older query API (the latter is a better fit for data coding,
-    #but GPT-4 series of models is only available via former)
-    if is_chat_model(model):
-        system_message = "You are a helpful assistant that continues the text given by the user."
-
-        # each batch in the prompt becomes its own asynchronous chat completion request
-        async def batch_request(prompt_batch):
-            tasks=[]
-            for prompt in prompt_batch:
-                messages = [
-                    {"role": "system", "content": ""},
-                    {"role": "user", "content": prompt},
-                ]
-                tasks.append(openai.ChatCompletion.acreate(
-                    model=model,
-                    messages=messages,
-                    temperature=0.0,
-                    max_tokens=max_tokens,
-                    n=1,  # one completion per prompt
-                    stop="###",
-                    frequency_penalty=0.0,
-                    presence_penalty=0.0,
-                ))
-            return await asyncio.gather(*tasks)
-
-        loop = asyncio.get_event_loop()
-        responses = loop.run_until_complete(batch_request(prompt_batch))
-        continuations = [response["choices"][0]["message"]["content"].strip() for response in responses]
-
-        # before we return the continuations, ensure that we don't violate OpenAI's rate limits
-        total_tokens = 0
-        for prompt in prompt_batch:
-            total_tokens += num_tokens_from_string(string=system_message, model=model)
-            total_tokens += num_tokens_from_string(string=prompt, model=model)
-        for continuation in continuations:
-            total_tokens += num_tokens_from_string(string=continuation, model=model)
-        max_tokens_per_minute = 90000  # currently imposed limit for ChatGPT models
-        wait_seconds = (total_tokens / max_tokens_per_minute) * 60.0
-        #print(f"Waiting {wait_seconds} seconds to ensure staying within rate limit")
-        time.sleep(wait_seconds)
-
-    else:
-        # OpenAI API query
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        response = openai.Completion.create(
-            model=model,
-            prompt=prompt_batch,
-            temperature=0.0,  # in this use case we prefer to get the single max prob continuation
-            max_tokens=max_tokens,
-            top_p=1.0,  # get the most probable topic
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-            n=1  # one completion per prompt
-        )
-        # extract continuations
-        continuations = [response["choices"][i]["text"] for i in range(len(prompt_batch))]
-
-    if use_cache:
-        cache(key=cache_key,value=continuations)
-    return continuations
 
 
 
@@ -262,21 +86,11 @@ def code_texts(coding_instruction,
     if verbose:
         print(f"Constructed {len(prompts)} prompts, example: {prompts[-1]}")
 
-    #Query the LLM in batches
-    continuations=[]
-    batch_size = 10  # The exact max batch_size for each model is unknown. This seems to work for all, and provides a nice speed-up.
-    N = len(texts)
-    for i in range(0, N, batch_size):
-        if verbose:
-            print(f"Coding texts {i}:{min([N, i + batch_size])} of total {N}")
-        prompt_batch=prompts[i:min([N, i + batch_size])]
-        continuations+=query_LLM(model=gpt_model,
-                                 prompt_batch=prompt_batch,
-                                 max_tokens=max_tokens,
-                                 use_cache=use_cache)
-        printProgressBar(min([N, i + batch_size]), N)
-
-    print("")
+    #Query the LLM
+    continuations=query_LLM(model=gpt_model,
+                            prompts=prompts,
+                            max_tokens=max_tokens,
+                            use_cache=use_cache)
 
     # Extract code strings from the LLM continuations
     result_codes=[continuation_to_code_string(c) for c in continuations]
@@ -289,7 +103,6 @@ def code_texts(coding_instruction,
             result_codes[i]=few_shot_code.strip()
 
     return result_codes
-
 
 
 
@@ -341,107 +154,6 @@ def extract_single_codes(df,multiple_column="codes",single_column="code",count_c
     return df
 
 
-def embed(texts,use_cache=True,model="text-embedding-ada-002"):
-    cache_key=(model+("".join(texts))).encode('utf-8')
-    if use_cache:
-        cached_result=load_cached(cache_key)
-        if cached_result is not None:
-            print("Loaded embeddings from cache, hash", cache_hash(cache_key))
-            return cached_result
-
-
-    #query embeddings from the API
-    texts=[json.dumps(s) for s in texts]  #make sure we escape quotes in a way compatible with GPT-3 API's internal use of json
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    batch_size = 32
-    N = len(texts)
-
-    embed_matrix=[]
-    for i in range(0, N, batch_size):
-        printProgressBar(i, N)
-        embed_batch=texts[i:min([N, i + batch_size])]
-        embeddings = openai.Embedding.create(input=embed_batch, model=model)
-        for j in range(len(embed_batch)):
-            embed_matrix.append(embeddings['data'][j]['embedding'])
-    print("")
-    embed_matrix=np.array(embed_matrix)
-    #dim = len(embeddings['data'][0]['embedding'])
-    #embed_matrix = np.zeros([N, dim])
-    #for i in range(N):
-    #    embed_matrix[i, :] = embeddings['data'][i]['embedding']
-
-    #update cache
-    if use_cache:
-        cache(cache_key,embed_matrix)
-
-    #return results
-    return embed_matrix
-
-
-def reduce_embedding_dimensionality(embeddings,num_dimensions,method="UMAP",use_cache=True,n_neighbors=None):
-    if isinstance(embeddings,list):
-        #embeddings is a list of embedding matrices => pack all to one big matrix for joint dimensionality reduction
-        all_emb = np.concatenate(embeddings, axis=0)
-    else:
-        all_emb = embeddings
-    def unpack(x,embeddings_list):
-        row = 0
-        result = []
-        for e in embeddings_list:
-            N = e.shape[0]
-            result.append(x[row:row + N])
-            row += N
-        return result
-
-    cache_key=(str(all_emb.tostring())+str(num_dimensions)+method+str(n_neighbors)).encode('utf-8')
-    if use_cache:
-        cached_result=load_cached(cache_key)
-        if cached_result is not None:
-            print("Loaded dimensionality reduction results from cache, hash ", cache_hash(cache_key))
-            if isinstance(embeddings, list):
-                return unpack(cached_result,embeddings)
-            else:
-                return cached_result
-    from sklearn.manifold import MDS
-    from sklearn.manifold import TSNE
-    import umap
-    from sklearn.decomposition import PCA
-    #cosine distance
-    all_emb=all_emb/np.linalg.norm(all_emb,axis=1,keepdims=True)
-
-    if method=="MDS":
-        mds=MDS(n_components=num_dimensions,dissimilarity="precomputed")
-        cosine_sim = np.inner(all_emb, all_emb)
-        cosine_dist = 1 - cosine_sim
-        x=mds.fit_transform(cosine_dist)
-    elif method=="TSNE":
-        tsne=TSNE(n_components=num_dimensions)
-        x=tsne.fit_transform(all_emb)
-    elif method=="PCA":
-        pca=PCA(n_components=num_dimensions)
-        x=pca.fit_transform(all_emb)
-    elif method=="UMAP":
-        if n_neighbors is None:
-            n_neighbors=5
-        reducer = umap.UMAP(n_components=num_dimensions,metric='cosine',n_neighbors=n_neighbors)
-        x=reducer.fit_transform(all_emb)
-    else:
-        raise Exception("Invalid dimensionality reduction method!")
-
-    if use_cache:
-        cache(cache_key,x)
-
-    if isinstance(embeddings, list):
-        return unpack(x,embeddings)
-    return x
-
-
-def set_cache_directory(dir):
-    global cache_dir
-    cache_dir=dir
-
-def get_cache_directory():
-    return cache_dir
 
 def group_codes_using_embeddings(df,embedding_context="",embedding_model="text-similarity-curie-001",min_group_size=3,max_group_emb_codes=100,group_desc_codes=2,group_desc_freq=True,grouping_dim=5,use_cache=True,dimred_method=None):
     """
@@ -636,51 +348,6 @@ def group_codes_using_embeddings(df,embedding_context="",embedding_model="text-s
     return {"df":df,"embeddings":embeddings,"embeddings_reduced":embeddings_reduced,"embeddings_2d":embeddings_2d,"group_embeddings":group_embeddings,"group_code_ids":group_code_ids,"n_groups":n_groups,"code_counts":code_counts}
 
 
-
-
-def gpt_human_code_dist(df,embedding_context,embedding_model):
-    result=df.copy()
-
-    # extract individual codes
-    gpt_codes = df["codes"].tolist()
-    human_codes = df["human_codes"].tolist()
-    gpt_codes_split=[]
-    human_codes_split=[]
-    for i in range(df.shape[0]):
-        gpt_codes_split.append([code.strip() for code in gpt_codes[i].split(";")])
-        human_codes_split.append([code.strip() for code in human_codes[i].split(";")])
-    gpt_codes = list(chain(*gpt_codes_split))
-    human_codes = list(chain(*human_codes_split))
-
-    # add context and generate embeddings
-    gpt_codes_with_context = [code + embedding_context for code in gpt_codes]
-    gpt_embeddings = embed(gpt_codes_with_context, use_cache=True, model=embedding_model)
-    human_codes_with_context = [code + embedding_context for code in human_codes]
-    human_embeddings = embed(human_codes_with_context, use_cache=True, model=embedding_model)
-
-    # compute the modified Hausdorff distances between the gpt and human codes assigned to each text
-    hausdorff_distances=[]
-    i_gpt=0
-    i_human=0
-    for i in range(df.shape[0]):
-        n_gpt=len(gpt_codes_split[i])
-        n_human=len(human_codes_split[i])
-        hausdorff_distances.append(hausdorff_embedding_distance(
-            A=gpt_embeddings[i_gpt:i_gpt+n_gpt],
-            B=human_embeddings[i_human:i_human+n_human]
-        ))
-        i_gpt+=n_gpt
-        i_human+=n_human
-    hausdorff_distances=np.array(hausdorff_distances)
-    hausdorff_distances=np.where(hausdorff_distances < 1e-10, 0, hausdorff_distances) #clean floating point accuracy errors
-    result["dist"]=hausdorff_distances
-    result.rename(columns={"codes":"gpt_codes"},inplace=True)
-
-    # sort the result based on similarity
-    result_sorted = result.sort_values('dist', ascending=True)
-    return result_sorted
-
-
 def code_df(df,
            column_to_code,
            coding_model,
@@ -806,123 +473,107 @@ def group_codes(
     df_codes,
     df_data,
     grouping_model,
-    grouping_instructions,
     use_cache,
-    other_threshold=None,
-    batch_size=None,
+    random_seed=None,
     verbose=False):
 
-    #get codes to group
+    #extract and check instructions
+    theme_elicitation_instructions=df_data["theme_elicitation_instructions"][0]
+    if not "<codes>" in theme_elicitation_instructions:
+        raise Exception("Theme elicitation instructions missing the <codes> placeholder which will be replaced with the list of codes in the LLM prompt.")
+
+    code_grouping_instructions=df_data["code_grouping_instructions"][0]
+    if not "<codes>" in code_grouping_instructions:
+        raise Exception("Code grouping instructions missing the <codes> placeholder which will be replaced with the list of codes in the LLM prompt.")
+    if not "<themes>" in code_grouping_instructions:
+        raise Exception("Code grouping instructions missing the <themes> placeholder which will be replaced with the list of themes in the LLM prompt.")
+
+    #STEP 1: Elicit a list of themes
+    #If there are more codes than fit a single prompt, we elicit the themes based on a random subset.
     codes=df_codes["code"].astype(str).to_list()
-    random.shuffle(codes) #to make the batches more representative, in case the input is somehow sorted
+    random.seed(random_seed)
+    random.shuffle(codes)
 
-    #extract the few-shot code and theme examples from the original data_df
-    df_ex = df_data[df_data['use_as_example'] == 1]
-    df_ex = df_ex[df_ex['human_themes'].notnull()]
-    print("Grouping codes into themes using the following human-defined examples:")
-    print(df_ex[["human_codes","human_themes"]].head(df_ex.shape[0]))
-    few_shot_code_strings = df_ex['human_codes'].astype(str).tolist()
-    few_shot_theme_strings = df_ex['human_themes'].astype(str).tolist()
-    n_few_shot_strings=len(few_shot_theme_strings)
-    few_shot_codes=[]
-    few_shot_themes=[]
-    for i in range(n_few_shot_strings):
-        c=string_to_codes(few_shot_code_strings[i])
-        t=string_to_codes(few_shot_theme_strings[i])
-        if len(c)!=len(t):
-            raise Exception(f"The number of examples codes does not match the example themes. Codes: {few_shot_code_strings[i]}, themes: {few_shot_theme_strings[i]}.")
-        few_shot_codes+=c
-        few_shot_themes+=t
-    n_few_shots=len(few_shot_codes)
+    #Determine how many codes we can fit the prompt
+    code_tokens=[num_tokens_from_string(code,grouping_model) for code in codes]
+    overhead=num_tokens_from_string(string=theme_elicitation_instructions,model=grouping_model)\
+             +token_overhead(grouping_model)+1000 #token overhead for theme list, system message and prompt start
+    max_tokens_for_codes=max_llm_context_length[grouping_model]-overhead
+    code_tokens_cumulative=0
+    max_codes=0
+    for i in range(len(code_tokens)):
+        code_tokens_cumulative+=code_tokens[i]+1 #+1 because of newlines after each code in the prompt
+        if code_tokens_cumulative>max_tokens_for_codes:
+            break
+        max_codes=i
 
-    #remove the few-shot examples from the codes to group
-    #print("all codes: ",codes)
-    #print("few-shot codes",few_shot_codes)
+    #Prompt the themes
+    print(f"Identifying themes based on {max_codes} codes...")
+    codes_as_string="\n".join(codes[:max_codes])
+    prompt=theme_elicitation_instructions
+    prompt=prompt.replace("<codes>",codes_as_string)
+    response=query_LLM(model=grouping_model,
+                       prompts=[prompt],
+                       temperature=0,
+                       use_cache=use_cache)[0]
+    if verbose:
+        print("Prompt:\n")
+        print(prompt+"\n")
 
-    for code in few_shot_codes:
-        if not (code in codes):
-            raise Exception(f"Few-shot code '{code}' not in the codes to group")
-        codes.remove(code)
+    #Parse response
+    response=response[response.find("{"):response.find("}")+1] #extract the .json part
+    def correct_gpt_quotation_escape(s):
+        return s #s.replace('\\\"\"','\\\"')       #Aalto gpt-3.5-turbo sometimes does a "double" escape of quotation marks
+    response=correct_gpt_quotation_escape(response)
+    j = json.loads(response)
+    theme_list=j["themes"]
+    theme_list=list(set(theme_list))  #remove possible duplicates
+    other_theme="Other" #the theme identification probably misses some minor themes => they will get grouped under this theme
+    theme_list.append(other_theme)
+    themes_as_string="\n".join(theme_list)
+    print("Themes identified:\n")
+    print(themes_as_string+"\n")
 
-    #with batch_size None, the user can try coding everything in a single batch,
-    #if that happens to fit the LLM context
-    if batch_size is None:
-        batch_size=len(codes)
-
-    #Query the LLM in batches, until all codes have been grouped
-    #Note that depending on the LLM, each batch query may not yield themes for all codes in the batch
-    #This is why the exact number of batches cannot be pre-calculated
-    # TODO: chat mode? With OpenAI models, this would be cheaper and allow larger context
-    grouped_codes=[]
-    themes={}
-    while len(codes)>0:
-        n_batch=min([len(codes), batch_size])
-        code_batch=codes[:n_batch]
-
-        #for others than the first batch, we add a random selection of previously grouped codes
-        #to the few-shot examples, to ensure consistency of grouping
-        few_shot_codes_batch = few_shot_codes.copy()
-        few_shot_themes_batch = few_shot_themes.copy()
-        if len(grouped_codes)>0:
-            extra_examples=grouped_codes.copy()
-            random.shuffle(extra_examples)
-            extra_examples=extra_examples[:min([len(grouped_codes),batch_size])]
-            few_shot_codes_batch+=extra_examples
-            few_shot_themes_batch+=[themes[x] for x in extra_examples]
-
-        # construct prompt
-        prompt = grouping_instructions + "\n\n" + "Codes:\n\n"
-        for code in few_shot_codes:  # first the examples (so that they can be first in the completion)
-            prompt += code + "\n"
-        for code in code_batch:  # then the rest
-            prompt += code + "\n"
-        prompt += "\nThe codes above again in the same order, one code per row, with the corresponding theme in square brackets after each code:\n\n"
-        for i in range(n_few_shots):  # first the examples (so that they can be first in the completion)
-            prompt += f"{few_shot_codes[i]} [{few_shot_themes[i]}]\n"
-        prompt += codes[0] + " ["
-
-        # query
-        print(f"Prompting for themes for {n_batch} codes out of {len(codes)} remaining...")
+    #STEP 2: Group codes under the themes in batches
+    #prompt the LLM
+    batch_size=50
+    remaining_codes=codes.copy()
+    themes={}   #results will be added to this dict, with codes as keys
+    while len(remaining_codes)>0:
+        current_remaining=len(remaining_codes)
+        prompt=code_grouping_instructions
+        code_batch=remaining_codes[:min(batch_size,len(remaining_codes))]
+        print(f"Grouping a batch of {len(code_batch)} codes, total {current_remaining} remaining...")
+        codes_as_string="\n".join(code_batch)
         if verbose:
-            print("Using the following prompt:")
-            print(prompt)
-        max_tokens = max_llm_context_length[grouping_model] - num_tokens_from_string(prompt, grouping_model)
-        max_tokens -= token_overhead(grouping_model)
+            print("Code batch:")
+            print(codes_as_string)
+        prompt=prompt.replace("<codes>",codes_as_string)
+        prompt=prompt.replace("<themes>",themes_as_string)
+        response=query_LLM(model=grouping_model,
+                           prompts=[prompt],
+                           use_cache=use_cache)[0]
+        response=response[response.find("{"):response.find("}")+1] #extract the .json part
+        response = correct_gpt_quotation_escape(response)
+        try:
+            j = json.loads(response)
+        except json.decoder.JSONDecodeError:
+            print(".json parse of the following response failed:\n")
+            print(response)
+            exit()
+        #remove codes that were successfully grouped
+        for code in code_batch:
+            if code in j:
+                remaining_codes.remove(code)
+                themes[code]=j[code]
 
-        continuation = query_LLM(model=grouping_model,
-                                 prompt_batch=[prompt],
-                                 max_tokens=max_tokens,
-                                 use_cache=use_cache)[0]
-        if verbose:
-            print(continuation)
-
-        # extract themes from the LLM continuation
-        continuation = codes[0] + " [" + continuation #add back the first code, for easier parsing
-        lines=continuation.split("\n")
-        n_extracted=0
-        for line in lines:
-            #print("Parsing line: ",line)
-            themes_line = re.findall(r'\[(.*?)\]', line)
-            n_themes_line = len(themes_line)
-            if n_themes_line!=1:
-                print("Warning: LLM returned other than 1 theme per line, skipping this line: ",line)
-            else:
-                theme=themes_line[0].strip()
-                code=line[:line.find(theme)-1].strip()
-                if not code in codes:
-                    print(f"Warning: LLM returned code '{code}' that is not (anymore) in the list of remaining codes, possibly a duplicate return. Skipping this line: ", line)
-                else:
-                    if code in grouped_codes:
-                        print(f"Warning: LLM returned code '{code}' that has already been grouped. Skipping this line: ",line)
-                    else:
-                        n_extracted += 1
-                        grouped_codes.append(code)
-                        themes[code]=theme
-                        codes.remove(code)
-        print(f"LLM returned valid themes for {n_extracted} / {n_batch} codes.")
-    #Grouping done. For completeness, add the few-shot examples to the results
-    for i in range(n_few_shots):
-        themes[few_shot_codes[i]]=few_shot_themes[i]
+        #prevent getting stuck in an infinite loop in case the LLM keeps making mistakes
+        if len(remaining_codes)==current_remaining:
+            print("These remaining codes could not be grouped, categorizing them as 'other':")
+            for code in remaining_codes:
+                print(code)
+                themes[code]="Other"
+            break
 
     #Add themes to the codes dataframe
     df_grouped=df_codes.copy()
@@ -944,6 +595,7 @@ def group_codes(
     df_grouped.sort_values(by=["theme_count", "theme","count"], inplace=True, ascending=False)
     df_grouped.reset_index(drop=True, inplace=True)
 
+    '''
     #Replace many very small themes with "Other"
     if other_threshold is not None:
         df_other=df_grouped[df_grouped["theme_count"]<=other_threshold].copy()
@@ -951,6 +603,7 @@ def group_codes(
         df_other["theme"]="Other"
         df_other["theme_count"]=df_other["count"].sum()
         df_grouped=pd.concat([df_rest,df_other],axis=0)
+    '''
 
     #Some final formatting
     df_grouped.rename(columns={"count":"code_count"},inplace=True)
@@ -1069,120 +722,452 @@ def code_and_embed(prompt_base,df,coding_model="text-curie-001",embedding_model=
     embeddings=embed(codes_with_context,model=embedding_model,use_cache=use_cache)
     return {"codes":codes,"counts":code_counts,"embeddings":embeddings}
 
-def frechet_embedding_distance(A,B,A_counts=None,B_counts=None):
-    '''
-    Frechet distance calculation adapted from (https://machinelearningmastery.com/how-to-implement-the-frechet-inception-distance-fid-from-scratch/)
 
-    :param A: Numpy array of embedding vectors, shape [num_vectors,num_embedding_dimensions]
-    :param B: Numpy array of embedding vectors, shape [num_vectors,num_embedding_dimensions]
-    :param A_counts: Numpy array of counts (frequencies) for each A vector
-    :param B_counts: Numpy array of counts (frequencies) for each B vector
-    :return:
-    '''
+def code_inductively(texts,
+                     research_question,
+                     few_shot_examples,
+                     gpt_model,
+                     use_cache=True,
+                     max_tokens=None,
+                     verbose=False):
+    if max_tokens is None:
+        # Set max_tokens dynamically based on maximum text length
+        # Note that len(text) is in characters, not tokens
+        max_tokens = max(max(len(text) for text in texts), 300)
+    
+    # Code batches of texts in parallel
+    prompts = [construct_inductive_prompt(text, research_question, few_shot_examples)
+               for text in texts]
 
-    if A_counts is None:
-        A_counts=np.ones(A.shape[0])
-    if B_counts is None:
-        B_counts=np.ones(B.shape[0])
-    # calculate mean and covariance statistics
-    mu1, sigma1 = np.average(A,axis=0,weights=A_counts), np.cov(A, rowvar=False,fweights=A_counts)
-    mu2, sigma2 = np.average(B,axis=0,weights=B_counts), np.cov(B, rowvar=False,fweights=B_counts)
-    # calculate sum squared difference between means
-    ssdiff = np.sum((mu1 - mu2) ** 2.0)
-    # calculate sqrt of product between cov
-    covmean = scipy.linalg.sqrtm(sigma1.dot(sigma2))
-    # check and correct imaginary numbers from sqrt
-    if np.iscomplexobj(covmean):
-        covmean = covmean.real
-    # calculate score
-    fd = ssdiff + np.trace(sigma1 + sigma2 - 2.0 * covmean)
-    return fd
+    # Query the LLM
+    continuations = query_LLM(
+        model=gpt_model,
+        prompts=prompts,
+        max_tokens=max_tokens,
+        use_cache=use_cache
+    )
 
-def hausdorff_embedding_distance(A,B,A_counts=None,B_counts=None):
-    '''
-    Modified Hausdorff distance calculation
+    # Attempt to correct any LLM formatting errors
+    coded_texts = correct_coding_errors(texts, continuations, verbose=verbose)
 
-    :param A: Numpy array of embedding vectors, shape [num_vectors,num_embedding_dimensions]
-    :param B: Numpy array of embedding vectors, shape [num_vectors,num_embedding_dimensions]
-    :param A_counts: Numpy array of counts (frequencies) for each A vector
-    :param B_counts: Numpy array of counts (frequencies) for each B vector
-    :return:
-    '''
-
-    if A_counts is None:
-        A_counts=np.ones(A.shape[0])
-    if B_counts is None:
-        B_counts=np.ones(B.shape[0])
-
-    A/=np.linalg.norm(A,axis=1,keepdims=True)
-    B/=np.linalg.norm(B,axis=1,keepdims=True)
-    cosine_sim = np.inner(A, B)  #result shape [n_A,n_B]
-    cosine_dist = 1.0 - cosine_sim  #cosine distance
-
-    res = np.sum(A_counts*np.min(cosine_dist,axis=1))+np.sum(B_counts*np.min(cosine_dist,axis=0))
-    res = res / (np.sum(A_counts)+np.sum(B_counts))
-
-    return res
-    #return np.sum(A_counts*np.min(dist,axis=1))+np.sum(B_counts*np.min(dist,axis=0))
-    #return np.max(np.min(dist,axis=1))+np.max(np.min(dist,axis=0))
-
-def KNN_precision_and_recall(generated,real,generated_counts=None,real_counts=None,k=5,knn_algorithm='brute'):
-    '''
-    Kynkäänniemi et al. precision and recall estimation for generated data.
-
-    :param generated: generated data, shape [num_vectors,dim]
-    :param real: real data (ground truth), shape [num_vectors,dim]
-    :param generated_counts: counts (frequencies) for each generated vector
-    :param real_counts: counts (frequencies) for each real vector
-    :param k: number of nearest neighbors to use. Low values are noisy, but high values may provide optimistic results
-    :param knn_algorithm: the nearest neighbors algorithm to use (see sklearn.neighbors.NearestNeighbors)
-    :return: tuple: (precision,recall)
-    '''
-
-    def KNN_support(A, B, k, knn_algorithm):
-        '''
-        For each vector in A, checks whether it lies within the support of the distribution of B vectors.
-        This is implemented by checking whether the vector lies within a hypersphere centered at the closest B vector,
-        hypersphere radius set equal to the distance between the B vector and its k:th nearest neighbor in B.
-        This is the core of the Kynkäänniemi et al. method for precision and recall estimation of generative models.
-        WARNING: you shouldn't call this with a B matrix that has vectors replicated based on frequencies, as this will mess up
-        the k:th nearest neighbor distance measures, which may become zero for replicated vectors.
-        '''
-        # Build KNN lookup structure for B
-        nbrs = NearestNeighbors(n_neighbors=k, algorithm=knn_algorithm).fit(B)
-        distances, _ = nbrs.kneighbors(B, n_neighbors=k)
-        kth_b_dist = distances[:, -1]
-        ab_distances, indices = nbrs.kneighbors(A, n_neighbors=1)
-        ab_closest_dist = ab_distances[:, 0]
-        b_search_ball_radiuses = kth_b_dist[indices[:, -1]]
-        assert (ab_closest_dist.shape == b_search_ball_radiuses.shape)
-        return ab_closest_dist <= b_search_ball_radiuses
-
-    if generated_counts is None:
-        generated_counts = np.ones(generated.shape[0])
-    if real_counts is None:
-        real_counts = np.ones(real.shape[0])
-
-    precision=np.average(KNN_support(A=generated, B=real, k=k, knn_algorithm=knn_algorithm),weights=generated_counts)
-    recall=np.average(KNN_support(A=real, B=generated, k=k, knn_algorithm=knn_algorithm),weights=real_counts)
-    return precision,recall
+    return coded_texts
 
 
-def KNN_density(embeddings,counts=None,k=5,knn_algorithm="brute"):
+def code_inductively_with_code_consistency(texts,
+                                           research_question,
+                                           few_shot_examples,
+                                           gpt_model,
+                                           use_cache=True,
+                                           max_tokens=None,
+                                           verbose=False):
+    if max_tokens is None:
+        # Set max_tokens dynamically based on maximum text length
+        # Note that len(text) is in characters, not tokens
+        max_tokens = max(max(len(text) for text in texts), 300)
 
-    nbrs = NearestNeighbors(n_neighbors=k, algorithm=knn_algorithm).fit(embeddings)
-    distances, indices = nbrs.kneighbors(embeddings, n_neighbors=k)
-    dim=embeddings.shape[1]
-    kth_distances=distances[:, -1]
-    hypersphere_volumes=np.power(kth_distances,dim)
-    if counts is None:
-        return 1.0/hypersphere_volumes
+    # Process texts sequentially to enforce code consistency
+    coded_texts = []
+    code_descriptions = {}
+    for idx, text in enumerate(texts):
+        # Update progress
+        print_progress_bar(idx + 1, len(texts), printEnd="")
+
+        # Find insights independent of existing codes
+        insight_prompt = construct_insight_prompt(text, research_question)
+        continuations = query_LLM(
+            model=gpt_model,
+            prompts=[insight_prompt],
+            max_tokens=200,
+            use_cache=use_cache
+        )
+        insights = continuations[0]
+
+        # Construct prompt, including a list of existing codes
+        prompt = construct_inductive_prompt(
+            text=text, 
+            research_question=research_question,
+            few_shot_examples=few_shot_examples,
+            code_descriptions=code_descriptions,
+            insights=insights
+        )
+
+        # Query the LLM
+        continuations = query_LLM(
+            model=gpt_model,
+            prompts=[prompt],
+            max_tokens=max_tokens,
+            use_cache=use_cache
+        )
+        
+        # Attempt to correct any LLM formatting errors
+        coded_text_batch = correct_coding_errors([text], continuations, verbose=verbose)
+
+        # Add singular coded text to output
+        assert len(coded_text_batch) == 1
+        coded_text = coded_text_batch[0]
+        coded_texts.append(coded_text)
+
+        # For any new codes, generate description and store
+        for highlight, code in parse_codes(coded_text):
+            if code not in code_descriptions:
+                code_descriptions[code] = generate_code_description(
+                    code,
+                    [highlight],
+                    research_question,
+                    gpt_model,
+                    use_cache
+                )
+                
+    return coded_texts, code_descriptions
+
+
+def code_deductively(texts,
+                     research_question,
+                     codebook,
+                     gpt_model,
+                     few_shot_examples=None,
+                     use_cache=True,
+                     verbose=False):
+    """
+    Apply deductive qualitative coding to a list of texts using a language model.
+
+    This function uses a predefined codebook and prompts a GPT-based model to 
+    generate coded versions of the input texts. It processes the texts deductively, 
+    meaning the coding is guided by the provided codebook. Optionally, few-shot 
+    examples can be included to guide the model's responses. The function returns 
+    the coded texts and a dictionary of codes with corresponding highlights.
+
+    Args:
+        texts (list of str): A list of texts to be coded.
+        research_question (str): The research question used to guide the language model.
+        codebook (list of str or tuple): A list of code strings or (code, description) tuples representing the codebook.
+        gpt_model (str): The identifier for the GPT model to be used for coding.
+        few_shot_examples (pd.DataFrame, optional): DataFrame containing few-shot examples to guide the model. 
+            Each row should contain a 'coded_text' column with pre-coded examples.
+        use_cache (bool, optional): Whether to use cached model results if available. Defaults to True.
+        verbose (bool, optional): Whether to print warnings for coding inconsistencies and errors. Defaults to False.
+
+    Returns:
+        tuple: 
+            - coded_texts (list of str): The input texts with codes inserted by the language model.
+    """
+    # Set max_tokens dynamically based on maximum text length
+    # Note that max_text_len is in characters, not tokens
+    max_text_len = max(len(text) for text in texts)
+
+    # Make codebook into a list of tuples if list of strings
+    codebook = [(item,) if isinstance(item, str) else item for item in codebook]
+
+    # Make sure codes in few_shot_examples are from codebook
+    codebook_codes = [item[0] for item in codebook]
+    if few_shot_examples is not None:
+        for _, row in few_shot_examples.iterrows():
+            for _, code in parse_codes(row.coded_text):
+                if code not in codebook_codes:
+                    print(f"WARNING: Few-shot examples contain code \"{code}\" that is not in the codebook")
+
+    # Query the LLM
+    prompts = [construct_deductive_prompt(text, research_question, codebook, few_shot_examples)
+               for text in texts]
+    continuations = query_LLM(
+        model=gpt_model,
+        prompts=prompts,
+        max_tokens=max_text_len,
+        use_cache=use_cache
+    )
+
+    # Attempt to correct any LLM formatting errors
+    coded_texts = correct_coding_errors(texts, continuations, verbose=verbose)
+
+    # Check output for any hallucinated codes
+    for idx in range(len(coded_texts)):
+        hallucinated_codes = []
+        for _, code in parse_codes(coded_texts[idx]):
+            if code not in codebook_codes:
+                hallucinated_codes.append(code)
+                if verbose:
+                    print(f"WARNING: Output contains code \"{code}\" that is not in the codebook, removing...")
+
+        # Remove any hallucinated codes
+        for code in hallucinated_codes:
+            coded_texts[idx] = _remove_code(coded_texts[idx], code)
+
+    return coded_texts
+
+
+def _remove_code(text, code_to_remove):
+    highlight_pattern = r"(\*\*(.*?)\*\*<sup>(.*?)<\/sup>)"
+    for full_match, highlight, codes in re.findall(highlight_pattern, text):
+        codes = [code.strip() for code in codes.split(";")]
+        if code_to_remove in codes:
+            if len(codes) == 1:
+                # If it's the only code, remove the entire highlighted structure
+                new_text = highlight
+            else:
+                # Remove the specified code and reformat
+                codes = [code for code in codes if code != code_to_remove]
+                new_text = "**{}**<sup>{}</sup>".format(highlight, "; ".join(codes))
+            
+            # Replace the first occurrence of the full match with the modified text
+            text = text.replace(full_match, new_text, 1)
+            break  # Only remove one occurrence per function call
+    return text
+
+
+def construct_inductive_prompt(text,
+                               research_question,
+                               few_shot_examples,
+                               code_descriptions=None,
+                               insights=None,
+                               ):
+    # Optionally add guidance about given main insights into the prompt
+    insight_text = " and the main insights from the text" if insights is not None else ""
+
+    prompt = f"You are an expert qualitative researcher conducting a project with the research question: {research_question}. "
+    prompt = f"""You are given a text to code inductively{insight_text}. Please carry out the following task:
+- Respond by repeating the original text, but highlighting the coded statements by surrounding the statements with double asterisks, as if they were bolded text in a Markdown document.
+- Include the associated code(s) immediately after the statement, separated by a semicolon and enclosed in <sup></sup> tags, as if they were superscript text in a Markdown document.
+- Ignore text that is not insightful with regards to the research question.
+- Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n\n"""
+
+    # Optionally add existing codes into the prompt, to encourage consistency
+    if code_descriptions is not None and len(code_descriptions) > 0:
+        prompt += "Some examples of codes in the format \"{code}: {description}\". Please create new codes when needed:\n"
+        # Shuffle codes to mitigate LLM recency bias
+        code_desc_str = [f"{code}: {description}" for code, description in code_descriptions.items()]
+        random.shuffle(code_desc_str)
+        # Add each code as a new line
+        prompt += "\n".join(code_desc_str) + "\n\n"
+
+    prompt += "Below, I first give you examples of the output you should produce given an example input. After that, I give you the actual input to process.\n\n"
+
+    # Add the few-shot examples in random order
+    for _, row in few_shot_examples.sample(frac=1).iterrows():
+        prompt += f"EXAMPLE INPUT:\n{row.text}\n\n"
+        prompt += f"EXAMPLE OUTPUT:\n{row.coded_text}\n\n"
+
+    prompt += f"ACTUAL INPUT:\n{text}"
+
+    if insights is not None:
+        prompt += f"\n\nMAIN INSIGHTS:\n{insights}"
+
+    return prompt
+
+
+def construct_deductive_prompt(text,
+                               research_question,
+                               codebook,
+                               few_shot_examples):
+    prompt = f"You are an expert qualitative researcher conducting a project with the research question: {research_question}. "
+    prompt += """You are given a text to code deductively using a list of codes. Please carry out the following task:
+- Respond by repeating the original text, but highlighting the coded statements by surrounding the statements with double asterisks, as if they were bolded text in a Markdown document.
+- Include the associated code(s) immediately after the statement, separated by a semicolon and enclosed in <sup></sup> tags, as if they were superscript text in a Markdown document.
+- Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n\n"""
+
+    if few_shot_examples is None:
+        prompt += "The following is an example of the correct output format, with fictional codes:\n\n"
+        prompt += "I really enjoy walking in the park on weekends. **It helps me clear my mind**<sup>mental clarity</sup> and **feel more connected to nature**<sup>connection to nature</sup>. Sometimes, I take my dog with me, and we just wander around, **enjoying the fresh air**<sup>sensory enjoyment; relaxation</sup>.\n\n"
+
+    prompt += "Use codes from the following list:\n" 
+    # Shuffle codebook to mitigate LLM recency bias
+    shuffled_codebook = codebook[:]
+    random.shuffle(shuffled_codebook)
+    # Add each code as a new line
+    for item in shuffled_codebook:
+        if len(item) == 1:
+            # No description included, add only code
+            prompt += f"{item[0]}\n"
+        else:
+            prompt += f"{item[0]}: {item[1]}\n"
+    prompt += "\n"
+
+    if few_shot_examples is not None:
+        prompt += "Below, I first give you examples of the output you should produce given an example input. After that, I give you the actual input to process.\n\n"
+
+        # Add the few-shot examples in random order
+        for _, row in few_shot_examples.sample(frac=1).iterrows():
+            prompt += f"EXAMPLE INPUT:\n{row.text}\n\n"
+            prompt += f"EXAMPLE OUTPUT:\n{row.coded_text}\n\n"
+
+    prompt += f"INPUT:\n{text}"
+    
+    return prompt
+
+
+def construct_insight_prompt(text, research_question):
+    prompt = f"You are an expert qualitative researcher who is given the following text to analyze:\n\n{text}\n\n"
+    prompt += f"Output a single sentence summarising the most interesting insights in the text, specifically pertaining to the research question \"{research_question}\". "
+    prompt += f"If there are no relevant insights, output \"The text contains no insights relevant to the research question.\""
+    return prompt
+
+
+def generate_code_description(code, examples, research_question, gpt_model, use_cache, counter_examples=[]):
+    prompt = "Write a brief but nuanced one-sentence description for the given inductive code, based on a set of texts annotated with the code"
+
+    if len(counter_examples) > 0:
+        prompt += " and counter-examples where the code does not apply.\n"
     else:
-        n=np.sum(counts[indices],axis=1)
-        return n/hypersphere_volumes
+        prompt += ".\n"
 
-def KNN_counts(embeddings,counts,k=5,knn_algorithm="brute"):
-    nbrs = NearestNeighbors(n_neighbors=k, algorithm=knn_algorithm).fit(embeddings)
-    _, indices = nbrs.kneighbors(embeddings, n_neighbors=k)
-    return np.sum(counts[indices],axis=1)
+    prompt += " For example, for the code \"overcommunication\", you might generate the description: Captures instances where participants discuss feeling overwhelmed by excessive communication, such as constant emails, messages, or meetings\n"
+    prompt += f" Write the description in the context of a qualitative research project with the research question: {research_question}.\n\n"
 
+    prompt += f"CODE: {code}\n\n"
+
+    prompt += "CODED TEXTS SEPARATED BY \"***\":\n"
+    prompt += "\n***\n".join(examples)
+
+    if len(counter_examples) > 0:
+        prompt += "\n\nCOUNTER-EXAMPLES SEPARATED BY \"***\":\n"
+        prompt += "\n***\n".join(examples)
+
+    continuations = query_LLM(
+        model=gpt_model,
+        prompts=[prompt],
+        max_tokens=200,
+        use_cache=use_cache
+    )
+    
+    return continuations[0]
+
+
+def correct_coding_errors(texts, continuations, verbose=False):
+    """
+    Check for LLM errors and attempt to correct errors where the LLM has omitted non-coded parts of the original text.
+    Outputs a list of LLM-coded texts corresponding to texts, with None in place of outputs that could not be corrected.
+    """
+    coded_texts = []
+    n_reconstructed = 0
+
+    for text, cont in zip(texts, continuations):
+        if len(cont) == 0:
+            # If the response is empty (possibly, due to model censorship), discard
+            print(f"WARNING: Discarding empty LLM response for text \"{text}\"\n")
+            coded_texts.append(None)
+            continue
+
+        # Check if there were any clear errors or hallucinations. In other words, does the LLM response (cont) match
+        # the original text when we remove the highlight and code annotations?
+        cont_text = re.sub(r"\*\*|<sup>(.*?)<\/sup>", "", cont)
+        if cont_text == text:
+            coded_texts.append(cont)
+            continue
+
+        # Sometimes, the LLM autocorrects typos even though we explicitly tell it not to.
+        # Ignore the difference if the edit distance between the original and LLM-highlighted text is small enough.
+        dist_threshold = 5
+        edit_dist = distance(text, cont_text)
+        if verbose:
+            print(f"Warning: LLM output differs from the original text, with edit distance {edit_dist}")
+            print(f"Original text: \"{text}\"")
+            print(f"LLM output: \"{cont}\"")
+        
+        if edit_dist < dist_threshold:
+            if verbose:
+                print(f"Distance less than treshold {dist_threshold}, accept\n")
+            coded_texts.append(cont)
+            continue
+
+        # Error detected, attempt to reconstruct by finding the annotations in the original text with fuzzy matching
+        annotations = re.findall(r"\*\*(.*?)\*\*(<sup>.*?<\/sup>)", cont)
+        reconstructed = text
+        reconstruction_failed = False
+        for highlight, codes in annotations:
+            match_start, match_end, ratio = find_best_match(reconstructed, highlight)
+            if ratio >= 90:
+                # Add annotation to reconstruction if found a match at sufficient similarity ratio
+                rec_annotation = "**" + reconstructed[match_start:match_end] + "**" + codes
+                reconstructed = reconstructed[:match_start] + rec_annotation + reconstructed[match_end:]
+            else:
+                if verbose:
+                    print(f"Could not find the LLM-annotated text \"{highlight}\" in the original text \"{text}\"")
+                reconstruction_failed = True
+                break
+
+        if reconstruction_failed:
+            if verbose:
+                print(f"Text reconstruction failed, discard LLM response\n")
+            coded_texts.append(None)
+        else:
+            if verbose:
+                print(f"Text reconstruction successful\n")
+            coded_texts.append(reconstructed)
+            n_reconstructed += 1
+
+    if n_reconstructed > 0 and verbose:
+        print(f"Had to reconstruct {n_reconstructed} texts due to LLM errors")
+
+    n_discarded = sum(t is None for t in coded_texts)
+    if n_discarded > 0:
+        print(f"WARNING: A total of {n_discarded} LLM outputs were discarded because of errors\n")
+
+    return coded_texts
+
+
+def find_best_match(original_text, target_substring):
+    """
+    Finds the substring in original_text that best matches target_substring using
+    fuzzy matching, allowing for some length variance.
+
+    Args:
+        original_text (str): The text to search in.
+        target_substring (str): The string to find a similar match for.
+
+    Returns:
+        tuple: (best_start, best_end, best_ratio) where best_start and best_end are
+        the indices of the best matching substring, and best_ratio is the similarity score.
+    """
+
+    best_ratio = 0
+    best_start = 0
+    best_end = 0
+
+    # We only search for matches within max_length_variance from len(target_substring)
+    max_length_variance = int(len(target_substring) / 4)
+
+    # Iterate over all possible window sizes
+    for start in range(len(original_text)):
+        end_min = start + len(target_substring) - max_length_variance
+        end_max = min(start + len(target_substring) + max_length_variance, len(original_text) + 1)
+        for end in range(end_min, end_max):
+            window = original_text[start:end]
+            similarity_ratio = fuzz.ratio(window, target_substring)
+            
+            # Update the best match if this window has a better match
+            if similarity_ratio > best_ratio:
+                best_ratio = similarity_ratio
+                best_start = start
+                best_end = end
+
+    return best_start, best_end, best_ratio
+
+
+def get_codes_and_highlights(coded_texts):
+    code_highlights = defaultdict(list)
+    for coded_text in coded_texts:
+        for highlight, code in parse_codes(coded_text):
+            code_highlights[code].append(highlight)
+    return code_highlights
+
+
+def parse_codes(coded_text):
+    if coded_text is None:
+        return []
+    return [(highlight, code.strip()) 
+            for highlight, codes in re.findall(r"\*\*(.*?)\*\*<sup>(.*?)<\/sup>", coded_text)
+            for code in codes.split(";")]
+
+
+def get_2d_code_embeddings(codes, embedding_context, embedding_model, verbose=False):
+    # Add context to each set of codes before embedding
+    codes_with_context = [code + embedding_context for code in codes]
+    embeddings = embed(codes_with_context, model=embedding_model, verbose=verbose)
+
+    # Reduce embedding dimensionality to 2
+    embeddings_2d = reduce_embedding_dimensionality(embeddings=embeddings, num_dimensions=2, verbose=verbose)
+
+    # Return results as a DataFrame
+    df_em = pd.DataFrame([(code,) for code in codes], columns=["code"])
+    df_em["code_2d_0"] = embeddings_2d[:,0]
+    df_em["code_2d_1"] = embeddings_2d[:,1]
+    return df_em
