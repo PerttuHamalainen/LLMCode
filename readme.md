@@ -1,21 +1,26 @@
 ### Executive Summary
-This repository contains the **LLMCode** Python toolkit for **AI-assisted qualitative data analysis and visualization** using Large Language Models (LLMs). This is a further development of the initial version used for the CHI 2023 paper [Evaluating Large Language Models in Generating Synthetic HCI Research Data: a Case Study.](https://dl.acm.org/doi/abs/10.1145/3544548.3580688)
+This repository contains the **LLMCode** toolkit for **AI-assisted qualitative data analysis** using Large Language Models (LLMs). This is a further development of the initial version used for the CHI 2023 paper [Evaluating Large Language Models in Generating Synthetic HCI Research Data: a Case Study.](https://dl.acm.org/doi/abs/10.1145/3544548.3580688)
 
 Here's an example of the codes and themes created by LLMCode for text data about experiencing video games as art:
 ![](test_results/bopp_test_visualization.gif)
 
-Currently, we support OpenAI models via both OpenAI API and Aalto University's Azure OpenAI API. The latter provides better data privacy and is GDPR-safe.
+Currently, we support OpenAI models via both OpenAI API and Aalto University's Azure OpenAI API. The latter provides better data privacy and is GDPR-safe. Support for fully private processing with local LLMs via [LMStudio](https://lmstudio.ai/) is in the works.
 
 
 ### Design principles
-Traditional qualitative content analysis and thematic analysis can very labor-intensive, and our goal is to enable extending such analyses to **large-scale data** such as online discussions. At the same time, we believe that **AI should clean and do the dishes while humans do creative work and research**, not the other way around. Thus, we prioritize **researcher agency and control** by allowing researchers to define and guide the analysis style through manually annotated data such as [this word document](https://raw.githubusercontent.com/PerttuHamalainen/LLMCode/master/test_data/bopp_test_augmented_feelings2.docx) that contains descriptions of artistic video game experiences coded for feelings and emotions they elicit. The more data you annotate manually, the more accurately LLMCode can mimic your annotations and the more reliably you can analyze and quantify LLMCode's output reliability and quality.
+Traditional qualitative content analysis and thematic analysis can very labor-intensive, and our goal is to both **improve the quality of life** of researchers and designers doing qualitative analysis and enable extending such analyses to **large-scale data** such as online discussions.
 
-Preferences about AI use vary&mdash;LLMCode supports multiple workflows with varying degrees of automation:
+We believe that **AI should do the dishes while humans do art and interesting work such as research**, not the other way around. Thus, we prioritize **researcher agency and control**. Hence, we focus on defining and guiding the analysis style through concrete examples, i.e., we assume our users are willing to put in at least some initial thinking and manual coding work to provide the examples. **The more data you code manually, the more accurately LLMCode can mimic your coding style** and the more reliably you can analyze and quantify LLMCode's output reliability and quality.
 
-- Prefer to do manual analysis? Our data visualization tools might still be useful in familiarizing oneself with the data. Furthermore, LLMCode can also be used to check for the consistency of your manual data coding.
-- Prefer to do manual analysis but have too much data? Try using LLMCode to highlight or extract relevant text passages to speed up the analysis.
-- Would like to do manual analysis, but have limited time or your brain gets fried after enough hours? Code as much data as you can and let LLMCode handle the rest, using your hand-coded data for guidance and validation.
-- Are you an industry user researcher looking for quick results? LLMCode can also run automatically based on a few coding examples and produce a report of the key themes.
+Preferences about AI use vary. Hence, LLMCode supports **multiple use cases and workflows** with varying degrees of automation:
+
+*AI for data exploration and visualization:* If you prefer to analyze data manually, you might still benefit from LLMCode's data visualization and exploration tools in the initial research phase of immersing yourself with your data. Furthermore, LLMCode can also be used to check for the consistency of your manual data coding.
+
+*AI for relevant data highlighting or sampling* If you prefer manual analysis but have too much data, you might try using LLMCode to highlight relevant text passages to speed up the analysis. The highlights can also be used to extract an informed random sample of the data.
+
+*AI for inductive and deductive coding* LLMCode can mimic your coding style based on examples manually coded by you. By providing a handful of examples (e.g., 10), you can quickly try out a coding approach and abstract and visualize your data as a distribution of codes. If you provide more manually coded data, it can be used to quantify and analyze the reliability of the AI coding.
+
+*AI for identifying and reporting themes* Based on the coding results, LLMCode can automatically group the codes under broader themes and produce a report with illustrative quotes. Knowing that LLMs can hallucinate such quotes, *LLMCode automatically checks and removes such hallucinations.* Note that although **academic researchers may not prefer to automate this stage** of analysis, we consider it potentially useful for 1) academic researchers exploring potential research topics and datasets, and 2) for industry designers and researchers who work under time pressure and cannot engage in deeper manual analysis.  
 
 
 ### How to use
@@ -58,7 +63,7 @@ Open the Anaconda command prompt and run the following commands:
     activate llmcode
     git clone https://github.com/PerttuHamalainen/LLMCode
     cd LLMCode
-    pip install -r requirements.txt
+    pip install -r requirements_notebooks.txt
     jupyter notebook
 
 The last line should launch the Jupyter notebook interface in your browser. Note that this interface doesn't have Colab's UI functionality and instead of using the sliders and other UI elements, you have to edit the values directly in the code.
@@ -77,24 +82,13 @@ LLMCode addresses the problems above:
 
 
 ### Citation 
-LLMCode is developed by Perttu Hämäläinen and Joel Oksanen, with additional contributions by Prabhav Bhatnagar.
+LLMCode is developed by Perttu Hämäläinen and Joel Oksanen, with additional contributions by Mikke Tavast and Prabhav Bhatnagar.
 
-If you use LLMCode for your research, please cite the paper (more papers in progress...):
+If you use LLMCode for your research, please use cite the repository as (a full technical report coming soon, citation info will be updated):
 
-    @inproceedings{10.1145/3544548.3580688,
-    author = {H\"{a}m\"{a}l\"{a}inen, Perttu and Tavast, Mikke and Kunnari, Anton},
-    title = {Evaluating Large Language Models in Generating Synthetic HCI Research Data: A Case Study},
-    year = {2023},
-    isbn = {9781450394215},
-    publisher = {Association for Computing Machinery},
-    address = {New York, NY, USA},
-    url = {https://doi.org/10.1145/3544548.3580688},
-    doi = {10.1145/3544548.3580688},
-    abstract = {Collecting data is one of the bottlenecks of Human-Computer Interaction (HCI) research. Motivated by this, we explore the potential of large language models (LLMs) in generating synthetic user research data. We use OpenAI’s GPT-3 model to generate open-ended questionnaire responses about experiencing video games as art, a topic not tractable with traditional computational user models. We test whether synthetic responses can be distinguished from real responses, analyze errors of synthetic data, and investigate content similarities between synthetic and real data. We conclude that GPT-3 can, in this context, yield believable accounts of HCI experiences. Given the low cost and high speed of LLM data generation, synthetic data should be useful in ideating and piloting new experiments, although any findings must obviously always be validated with real data. The results also raise concerns: if employed by malicious users of crowdsourcing services, LLMs may make crowdsourcing of self-report data fundamentally unreliable.},
-    booktitle = {Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems},
-    articleno = {433},
-    numpages = {19},
-    keywords = {User experience, Language models, User models, GPT-3},
-    location = {Hamburg, Germany},
-    series = {CHI '23}
+    @software{LLMCode,
+      author = {H{\"a}m{\"a}l{\"a}inen, Perttu and Oksanen, Joel and Tavast, Mikke and Bhatnagar, Prabhav},
+      title = {{LLMCode: A toolkit for AI-assisted qualitative data analysis}},
+      url = {https://github.com/PerttuHamalainen/LLMCode},
+      year = {2024}
     }
