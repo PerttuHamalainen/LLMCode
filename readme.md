@@ -1,5 +1,5 @@
 ### Executive Summary
-This repository contains the **LLMCode** toolkit for **AI-assisted qualitative data analysis** using Large Language Models (LLMs). This is a further development of the initial version used for the CHI 2023 paper [Evaluating Large Language Models in Generating Synthetic HCI Research Data: a Case Study.](https://dl.acm.org/doi/abs/10.1145/3544548.3580688)
+This repository contains the **LLMCode** toolkit for **AI-assisted qualitative data analysis** using Large Language Models (LLMs). This is a further development of the initial tools developed for the CHI 2023 paper [Evaluating Large Language Models in Generating Synthetic HCI Research Data: a Case Study.](https://dl.acm.org/doi/abs/10.1145/3544548.3580688)
 
 Here's an example of the codes and themes created by LLMCode for text data about experiencing video games as art:
 ![](test_results/bopp_test_visualization.gif)
@@ -16,11 +16,11 @@ Preferences about AI use vary. Hence, LLMCode supports **multiple use cases and 
 
 *AI for data exploration and visualization:* If you prefer to analyze data manually, you might still benefit from LLMCode's data visualization and exploration tools in the initial research phase of immersing yourself with your data. Furthermore, LLMCode can also be used to check for the consistency of your manual data coding.
 
-*AI for relevant data highlighting or sampling* If you prefer manual analysis but have too much data, you might try using LLMCode to highlight relevant text passages to speed up the analysis. The highlights can also be used to extract an informed random sample of the data.
+*AI for relevant data highlighting or sampling:* If you prefer manual analysis but have too much data, you might try using LLMCode to highlight relevant text passages to speed up the analysis. The highlights can also be used to extract an informed random sample of the data.
 
-*AI for inductive and deductive coding* LLMCode can mimic your coding style based on examples manually coded by you. By providing a handful of examples (e.g., 10), you can quickly try out a coding approach and abstract and visualize your data as a distribution of codes. If you provide more manually coded data, it can be used to quantify and analyze the reliability of the AI coding.
+*AI for inductive and deductive coding:* LLMCode can mimic your coding style based on examples manually coded by you. By providing a handful of examples (e.g., 10), you can quickly try out a coding approach and abstract and visualize your data as a distribution of codes. If you provide more manually coded data, it can be used to quantify and analyze the reliability of the AI coding.
 
-*AI for identifying and reporting themes* Based on the coding results, LLMCode can automatically group the codes under broader themes and produce a report with illustrative quotes. Knowing that LLMs can hallucinate such quotes, *LLMCode automatically checks and removes such hallucinations.* Note that although **academic researchers may not prefer to automate this stage** of analysis, we consider it potentially useful for 1) academic researchers exploring potential research topics and datasets, and 2) for industry designers and researchers who work under time pressure and cannot engage in deeper manual analysis.  
+*AI for identifying and reporting themes:* Based on the coding results, LLMCode can automatically group the codes under broader themes and produce a report with illustrative quotes. Knowing that LLMs can hallucinate such quotes, **LLMCode automatically checks and removes such hallucinations.** Note that although **academic researchers may not prefer to automate this stage** of analysis, we consider it potentially useful for 1) initial quick exploration of potential research topics and datasets, and 2) industry designers and researchers who work under time pressure and cannot engage in deeper manual analysis.  
 
 
 ### How to use
@@ -73,11 +73,13 @@ The last line should launch the Jupyter notebook interface in your browser. Note
 LLMs like ChatGPT can conduct a form of qualitative analysis out of the box: Just paste your data to the chat, and ask ChatGPT to identify themes. However, this has two major problems:
 
 * All data must fit the maximum context size.
-* Evaluating the quality and correctness of the results is hard. Often, ChatGPT may simply neglect large parts of your data.
+* The results may have errors. For instance, the LLM may simply neglect large parts of your data.
+* Evaluating the quality and correctness of the results is hard.
 
 LLMCode addresses the problems above:
 * LLMCode only requires that a single coded text and the coding examples fit the context.
-* LLMCode allows comparing the results to human-annotated data both quantitatively and qualitatively, which helps in both evaluating the severity of the LLM errors. Furthermore, the error analysis often reveals inconsistencies and mistakes in the human-annotations.
+* LLMCode systematically processes the data chunk-by-chunk (e.g., paragraph of interview text), ensuring that equal attention is paid to all data.
+* LLMCode allows comparing the results to human-annotated data both quantitatively and qualitatively, which helps in both evaluating the severity of the LLM errors. Furthermore, the error analysis often reveals inconsistencies and mistakes in the human-annotations, allowing one to improve one's manual coding and analysis.
 
 
 
