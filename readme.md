@@ -82,6 +82,13 @@ LLMCode addresses the problems above:
 * LLMCode allows comparing the results to human-annotated data both quantitatively and qualitatively, which helps in both evaluating the severity of the LLM errors. Furthermore, the error analysis often reveals inconsistencies and mistakes in the human-annotations, allowing one to improve one's manual coding and analysis.
 
 
+### Papers, lectures etc.
+Here's the [intro talk](docs/LLMs_intro.pdf) from Aalto University's AI-assisted qualitative data analysis bootcamp, 31 Oct 2024.
+
+Experiment 3 of [this CHI 2023 paper](https://dl.acm.org/doi/abs/10.1145/3544548.3580688) uses a preliminary version of LLMCode to compare different datasets:
+
+*A technical report is coming soon and the citation info below will be updated.*
+
 
 ### Citation 
 LLMCode is developed by Perttu Hämäläinen and Joel Oksanen, with additional contributions by Mikke Tavast and Prabhav Bhatnagar.
