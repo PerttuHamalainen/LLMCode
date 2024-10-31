@@ -50,7 +50,7 @@ Tutorial 2: [Relevant text extraction or highlighting](https://colab.research.go
 
 Tutorial 3: [Inductive and deductive coding](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/inductive_and_deductive_coding.ipynb).
 
-Tutorial 4: [From codes to themes](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/themes.ipynb).
+Tutorial 4: [From codes to themes](https://colab.research.google.com/github/PerttuHamalainen/LLMCode/blob/master/theme_generation.ipynb).
 
 #### Step 3: Install and run the notebooks locally
 Google Colab is the fastest way to try LLMCode, but if you want to avoid your data being processed by Google, you should install and run LLMCode locally.
