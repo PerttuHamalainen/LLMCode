@@ -30,7 +30,7 @@ You can also use an Aalto Azure OpenAI API key and skip these steps, although th
 1. Create an OpenAI account at [https://platform.openai.com](https://platform.openai.com).
 2. Go to the account management page
 3. Choose "Billing" and buy a fixed amount of usage (at least 1€) or setup continuous billing (with a monthly quota for safety reasons)
-4. Choose "API keys" and create an API key. The system gives you a private key that you should store in a safe place, e.g., a password manager. See Step 4 below for how to use the stored key.
+4. Choose "API keys" and create an API key. The system gives you a private key that you should store in a safe place, e.g., a password manager.  
 
 *Important info regarding API costs:*
 * LLM API calls cost money. YOU USE LLMCODE AT YOUR OWN RISK.
