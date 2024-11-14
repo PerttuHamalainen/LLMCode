@@ -724,7 +724,7 @@ def code_and_embed(prompt_base,df,coding_model="text-curie-001",embedding_model=
 
 
 def code_inductively(texts,
-                     research_question,
+                     coding_instructions,
                      few_shot_examples,
                      gpt_model,
                      use_cache=True,
@@ -736,7 +736,7 @@ def code_inductively(texts,
         max_tokens = max(max(len(text) for text in texts), 300)
     
     # Code batches of texts in parallel
-    prompts = [construct_inductive_prompt(text, research_question, few_shot_examples)
+    prompts = [construct_inductive_prompt(text, coding_instructions, few_shot_examples)
                for text in texts]
 
     # Query the LLM
@@ -755,6 +755,7 @@ def code_inductively(texts,
 
 def code_inductively_with_code_consistency(texts,
                                            research_question,
+                                           coding_instructions,
                                            few_shot_examples,
                                            gpt_model,
                                            use_cache=True,
@@ -785,7 +786,7 @@ def code_inductively_with_code_consistency(texts,
         # Construct prompt, including a list of existing codes
         prompt = construct_inductive_prompt(
             text=text, 
-            research_question=research_question,
+            coding_instructions=coding_instructions,
             few_shot_examples=few_shot_examples,
             code_descriptions=code_descriptions,
             insights=insights
@@ -822,7 +823,7 @@ def code_inductively_with_code_consistency(texts,
 
 
 def code_deductively(texts,
-                     research_question,
+                     coding_instructions,
                      codebook,
                      gpt_model,
                      few_shot_examples=None,
@@ -839,7 +840,7 @@ def code_deductively(texts,
 
     Args:
         texts (list of str): A list of texts to be coded.
-        research_question (str): The research question used to guide the language model.
+        coding_instructions (str): The user-defined coding instructions used to guide the language model.
         codebook (list of str or tuple): A list of code strings or (code, description) tuples representing the codebook.
         gpt_model (str): The identifier for the GPT model to be used for coding.
         few_shot_examples (pd.DataFrame, optional): DataFrame containing few-shot examples to guide the model. 
@@ -867,7 +868,7 @@ def code_deductively(texts,
                     print(f"WARNING: Few-shot examples contain code \"{code}\" that is not in the codebook")
 
     # Query the LLM
-    prompts = [construct_deductive_prompt(text, research_question, codebook, few_shot_examples)
+    prompts = [construct_deductive_prompt(text, coding_instructions, codebook, few_shot_examples)
                for text in texts]
     continuations = query_LLM(
         model=gpt_model,
@@ -915,7 +916,7 @@ def _remove_code(text, code_to_remove):
 
 
 def construct_inductive_prompt(text,
-                               research_question,
+                               coding_instructions,
                                few_shot_examples,
                                code_descriptions=None,
                                insights=None,
@@ -923,12 +924,13 @@ def construct_inductive_prompt(text,
     # Optionally add guidance about given main insights into the prompt
     insight_text = " and the main insights from the text" if insights is not None else ""
 
-    prompt = f"You are an expert qualitative researcher conducting a project with the research question: {research_question}. "
-    prompt = f"""You are given a text to code inductively{insight_text}. Please carry out the following task:
+    prompt = f"""You are an expert qualitative researcher. You are given a text to code inductively{insight_text}. Please carry out the following task:
 - Respond by repeating the original text, but highlighting the coded statements by surrounding the statements with double asterisks, as if they were bolded text in a Markdown document.
 - Include the associated code(s) immediately after the statement, separated by a semicolon and enclosed in <sup></sup> tags, as if they were superscript text in a Markdown document.
-- Ignore text that is not insightful with regards to the research question.
-- Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n\n"""
+- Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n"""
+    
+    # Add user-defined instructions
+    prompt += coding_instructions + "\n\n"
 
     # Optionally add existing codes into the prompt, to encourage consistency
     if code_descriptions is not None and len(code_descriptions) > 0:
@@ -955,14 +957,16 @@ def construct_inductive_prompt(text,
 
 
 def construct_deductive_prompt(text,
-                               research_question,
+                               coding_instructions,
                                codebook,
                                few_shot_examples):
-    prompt = f"You are an expert qualitative researcher conducting a project with the research question: {research_question}. "
-    prompt += """You are given a text to code deductively using a list of codes. Please carry out the following task:
+    prompt = """You are an expert qualitative researcher. You are given a text to code deductively using a list of codes. Please carry out the following task:
 - Respond by repeating the original text, but highlighting the coded statements by surrounding the statements with double asterisks, as if they were bolded text in a Markdown document.
 - Include the associated code(s) immediately after the statement, separated by a semicolon and enclosed in <sup></sup> tags, as if they were superscript text in a Markdown document.
-- Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n\n"""
+- Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n"""
+
+    # Add user-defined instructions
+    prompt += coding_instructions + "\n\n"
 
     if few_shot_examples is None:
         prompt += "The following is an example of the correct output format, with fictional codes:\n\n"
