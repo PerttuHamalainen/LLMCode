@@ -1,0 +1,9 @@
+[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+}
+
+[contenteditable="true"]:focus {
+  outline: none;
+}
