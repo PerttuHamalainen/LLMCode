@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focusedOnAny }) => {
   const [text, setText] = useState(highlight.codes || "");
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [deleted, setDeleted] = useState(false);
   const divRef = useRef(null);
 
   const getCursorPosition = () => {
@@ -56,9 +57,16 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
   };
 
   const handleBlur = () => {
-    onTextChange(text);
-    onFocusChange(false, text);
+    if (!deleted) {
+      onTextChange(text);
+      onFocusChange(false, text);
+    }
   };
+
+  const handleDelete = () => {
+    setDeleted(true);
+    onFocusChange(false, "");  // Deletes the highlight
+  }
 
   useEffect(() => {
     if (highlight.focused) {
@@ -75,30 +83,54 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
   }, [highlight.focused]);
 
   return (
-    <div
-      ref={divRef}
-      style={{
-        display: "inline-block",
-        backgroundColor: highlight.focused || (!focusedOnAny && highlight.hovered) ? "#c7e3ff" : "#f0f0f0",
-        borderRadius: "8px",
-        padding: "5px 8px",
-        color: text ? "black" : "#aaa",
-        position: "relative",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-      }}
-      contentEditable={true}
-      suppressContentEditableWarning={true}
-      onInput={handleInput}
-      onKeyDown={handleKeyDown}
-      onFocus={() => onFocusChange(true, text)}
-      onBlur={handleBlur}
-      onMouseEnter={() => onHoverChange(true)}
-      onMouseLeave={() => onHoverChange(false)}
-      data-placeholder="Codes separated by ;"
-    >
-      {text}
+    <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+      <div
+        ref={divRef}
+        style={{
+          display: "inline-block",
+          backgroundColor: highlight.focused || (!focusedOnAny && highlight.hovered) ? "#c7e3ff" : "#f0f0f0",
+          borderRadius: "8px",
+          padding: "5px 8px",
+          color: text ? "black" : "#aaa",
+          position: "relative",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+        contentEditable={true}
+        suppressContentEditableWarning={true}
+        onInput={handleInput}
+        onKeyDown={handleKeyDown}
+        onFocus={() => onFocusChange(true, text)}
+        onBlur={handleBlur}
+        onMouseEnter={() => onHoverChange(true)}
+        onMouseLeave={() => onHoverChange(false)}
+        data-placeholder="Codes separated by ;"
+      >
+        {text}
+      </div>
+
+      { highlight.focused &&
+        <button
+          onPointerDown={handleDelete}
+          style={{
+            width: "20px",
+            height: "20px",
+            borderRadius: "50%",
+            backgroundColor: "#c7e3ff",
+            color: "black",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: "14px",
+            lineHeight: "14px",
+          }}
+        >
+          ×
+        </button>
+      }
     </div>
   );
 };
