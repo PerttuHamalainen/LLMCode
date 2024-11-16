@@ -253,7 +253,7 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
   };
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px", padding: "50px"}} onMouseUp={handleTextSelect}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px", padding: "20px 0px"}} onMouseUp={handleTextSelect}>
       <div
         style={{
           width: "600px",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect } from "react";
 import CodingPane from './CodingPane';
 import CodeList from "./CodeList";
 import FileUpload from "./FileUpload";
@@ -84,7 +84,12 @@ function App() {
   const handleFileUpload = (res) => {
     // Save file name and texts
     setFileName(res.fileName);
-    setTexts(res.texts);
+    const uploadedTexts = res.texts.map((text, idx) => ({
+      text: text,
+      depth: res.depths ? res.depths[idx] : 0, // If depths aren't uploaded, depth for each text is set to 0
+    }));
+    setTexts(uploadedTexts);
+
     // Initialise highlights with empty arrays for each text
     setHighlights(Array.from({ length: res.texts.length }, () => []));
   }
@@ -138,6 +143,7 @@ function App() {
       <div
         style={{
           marginLeft: "290px", // Prevents overlap with the fixed sidebar
+          padding: "30px 0px"
         }}
       >
         <div
@@ -146,30 +152,41 @@ function App() {
             flexDirection: "column",
           }}
         >
-          {texts.map((text, idx) => {
+          {texts.map((item, idx) => {
             const textHighlights = highlights[idx] || [];
             return (
-              <Fragment key={idx}>
-                <CodingPane 
-                  text={text} 
-                  highlights={textHighlights}
-                  setHighlights={(updateFunc) => setHighlightsForIdx(idx, updateFunc)}
-                  focusedOnAny={focusedOnAny}
-                  createLog={(logData) => createLog({ ...logData, textId: idx })}
-                />
-                {idx < texts.length - 1 && (
+              <div style={{display: "flex", gap: "30px", marginLeft: "50px"}} key={idx}>
+                {Array.from({ length: item.depth }).map((_, index) => (
                   <div
+                    key={index}
                     style={{
-                      flexGrow: 1, // Makes the line take up available space
-                      borderBottom: "1px dashed",
-                      borderColor: "#ddd",
-                      borderWidth: "1px",
-                      borderImage: "repeating-linear-gradient(to right, #ddd 0, #ddd 5px, transparent 5px, transparent 10px) 1",
-                      marginLeft: "50px"
+                      width: "1px",
+                      backgroundColor: "#ddd",
+                      margin: "0px 0",
                     }}
                   />
-                )}
-              </Fragment>
+                ))}
+
+                <div>
+                  <CodingPane 
+                    text={item.text} 
+                    highlights={textHighlights}
+                    setHighlights={(updateFunc) => setHighlightsForIdx(idx, updateFunc)}
+                    focusedOnAny={focusedOnAny}
+                    createLog={(logData) => createLog({ ...logData, textId: idx })}
+                  />
+
+                  {idx < texts.length - 1 && item.depth === texts[idx + 1].depth && (
+                    <div
+                      style={{
+                        width: "50px",
+                        height: "1px",
+                        backgroundColor: "#ddd",
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>

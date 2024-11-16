@@ -70,14 +70,14 @@ const FileManager = ({ fileName, texts, highlights, editLog, onDelete }) => {
   };
 
   const handleFileDownload = () => {
-    const codedTexts = texts.map((text, idx) => {
+    const codedTexts = texts.map((item, idx) => {
       const textHighlights = highlights[idx];
-      return formatTextWithHighlights(text, textHighlights);
+      return formatTextWithHighlights(item.text, textHighlights);
     });
   
     // Prepare the data for PapaParse
-    const csvData = texts.map((text, idx) => ({
-      "text": text,
+    const csvData = texts.map((item, idx) => ({
+      "text": item.text,
       "coded_text": codedTexts[idx],
     }));
   

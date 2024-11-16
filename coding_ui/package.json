@@ -45,5 +45,5 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "gh-pages": "^6.2.0"
   },
-  "homepage": "https://PerttuHamalainen.github.io/LLMCode/coding_ui"
+  "homepage": "https://PerttuHamalainen.github.io/LLMCode"
 }
