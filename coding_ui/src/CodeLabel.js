@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 
 const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focusedOnAny }) => {
+  const [text, setText] = useState(highlight.codes || "");
   const [cursorPosition, setCursorPosition] = useState(0);
   const divRef = useRef(null);
 
@@ -10,10 +11,9 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
     const preCaretRange = range.cloneRange();
     preCaretRange.selectNodeContents(divRef.current);
     preCaretRange.setEnd(range.endContainer, range.endOffset);
-    return preCaretRange.toString().length; // Return the cursor position
+    return preCaretRange.toString().length;
   };
 
-  // Restore the cursor position after updating the text
   const restoreCursorPosition = (position) => {
     const element = divRef.current;
     if (!element) return;
@@ -22,11 +22,10 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
     const range = document.createRange();
     range.selectNodeContents(element);
 
-    // Find the correct text node and offset
     let charCount = 0;
     let found = false;
-
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+
     while (walker.nextNode() && !found) {
       const textNode = walker.currentNode;
       const nodeLength = textNode.textContent.length;
@@ -44,18 +43,21 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
     selection.addRange(range);
   };
 
-  // Handle input and update the text state
-  const handleInput = (e) => {
+  const handleInput = () => {
     setCursorPosition(getCursorPosition());
-    onTextChange(e.currentTarget.textContent);
+    setText(divRef.current.textContent);
   };
 
-  // End focus on enter
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      onFocusChange(false)
+      divRef.current.blur();
       e.preventDefault();
     }
+  };
+
+  const handleBlur = () => {
+    onTextChange(text);
+    onFocusChange(false, text);
   };
 
   useEffect(() => {
@@ -72,12 +74,6 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
     }
   }, [highlight.focused]);
 
-  const handleUIFocusChange = (newFocused) => {
-    if (newFocused !== highlight.focused) {
-      onFocusChange(newFocused)
-    }
-  }
-
   return (
     <div
       ref={divRef}
@@ -86,7 +82,7 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
         backgroundColor: highlight.focused || (!focusedOnAny && highlight.hovered) ? "#c7e3ff" : "#f0f0f0",
         borderRadius: "8px",
         padding: "5px 8px",
-        color: highlight.codes ? "black" : "#aaa",
+        color: text ? "black" : "#aaa",
         position: "relative",
         whiteSpace: "nowrap",
         overflow: "hidden",
@@ -96,15 +92,16 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
       suppressContentEditableWarning={true}
       onInput={handleInput}
       onKeyDown={handleKeyDown}
-      onFocus={() => handleUIFocusChange(true)}
-      onBlur={() => handleUIFocusChange(false)}
+      onFocus={() => onFocusChange(true, text)}
+      onBlur={handleBlur}
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}
       data-placeholder="Codes separated by ;"
     >
-      {highlight.codes}
+      {text}
     </div>
   );
-}
+};
+
 
 export default CodeLabel;

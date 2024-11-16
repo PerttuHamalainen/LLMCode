@@ -58,6 +58,8 @@ function App() {
   };
 
   const createLog = (logData) => {
+    console.log("New log: ", logData)
+
     setEditLog((prevEntries) => {
       // Do not log highlights that never had any codes (that were instantly deleted)
       const prevLog = prevEntries.at(-1);
@@ -117,6 +119,8 @@ function App() {
           backgroundColor: "#f7f7f7",
           borderRight: "1px solid #ddd",
           padding: "50px 30px 50px 30px",
+          overflowY: "auto",
+          boxSizing: "border-box"
         }}
       >
         <div
@@ -142,7 +146,7 @@ function App() {
 
       <div
         style={{
-          marginLeft: "290px", // Prevents overlap with the fixed sidebar
+          marginLeft: "240px", // Prevents overlap with the fixed sidebar
           padding: "30px 0px"
         }}
       >
@@ -155,7 +159,7 @@ function App() {
           {texts.map((item, idx) => {
             const textHighlights = highlights[idx] || [];
             return (
-              <div style={{display: "flex", gap: "30px", marginLeft: "50px"}} key={idx}>
+              <div style={{display: "flex", gap: "20px", marginLeft: "50px"}} key={idx}>
                 {Array.from({ length: item.depth }).map((_, index) => (
                   <div
                     key={index}
