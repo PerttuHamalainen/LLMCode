@@ -104,6 +104,20 @@ function App() {
     setEditLog([]);
   }
 
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "You may lose all progress on exiting the browser tab. Have you downloaded your codes and logs?";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup the event listener on component unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
   return (
     <div 
       style={{
