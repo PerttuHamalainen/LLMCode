@@ -8,6 +8,13 @@ const FileUpload = ({ onUpload }) => {
     if (!file) return;
   
     const fileExtension = file.name.split(".").pop().toLowerCase();
+
+    const getObjectSize = (obj) => {
+      const jsonString = JSON.stringify(obj);
+      const blob = new Blob([jsonString]);
+      const sizeInBytes = blob.size;
+      return sizeInBytes;
+    };
   
     const parseData = (rows, fileName) => {
       if (!rows || rows.length === 0) {
@@ -51,9 +58,18 @@ const FileUpload = ({ onUpload }) => {
     
         data.push(item);
       }
-    
-      // Call the onUpload callback with the parsed data
-      onUpload({ fileName, data });
+
+      // Check that the data fits in localStorage, with room for annotations
+      const localStorageLimitInMB = 5;
+      const sizeLimit = localStorageLimitInMB * 1024 * 1024 / 2; // Convert MB to bytes and divide by 2
+      const sizeInBytes = getObjectSize(data);
+
+      if (sizeInBytes < sizeLimit) {
+        console.log(`Object size is ${(sizeInBytes / 1024).toFixed(2)} KB. Safe to store and process in localStorage.`);
+        onUpload({ fileName, data });
+      } else {
+        alert(`File size (${(sizeInBytes / 1024).toFixed(2)} KB) exceeds the ${(sizeLimit / 1024).toFixed(2)} KB limit.`);
+      }
     };
   
     if (fileExtension === "csv") {
