@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 const DownloadButton = ({ text, onDownload }) => {
   return (
@@ -69,33 +70,58 @@ const FileManager = ({ fileName, texts, highlights, editLog, onDelete }) => {
     return result;
   };
 
-  const handleFileDownload = () => {
+  const handleFileDownload = (fileType) => {
     const codedTexts = texts.map((item, idx) => {
       const textHighlights = highlights[idx];
       return formatTextWithHighlights(item.text, textHighlights);
     });
   
-    // Prepare the data for PapaParse
-    const csvData = texts.map((item, idx) => {
+    // Prepare the data
+    const data = texts.map((item, idx) => {
       const { parentId, ...rest } = item;
       return {
         ...rest,
-        parent_id: parentId,  // Rename 'parentId' to 'parent_id'
+        parent_id: parentId, // Rename 'parentId' to 'parent_id'
         coded_text: codedTexts[idx],
       };
     });
-
-    // Convert the data to CSV and trigger download
-    const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
   
-    // Create a temporary link and trigger the download
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "coded_texts.csv");
-    link.click();
-    URL.revokeObjectURL(url);
+    if (fileType === "csv") {
+      // CSV Download using PapaParse
+      const csv = Papa.unparse(data);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+  
+      // Trigger CSV download
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "coded_texts.csv");
+      link.click();
+      URL.revokeObjectURL(url);
+    } else if (fileType === "xlsx") {
+      // Excel Download using xlsx
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Coded Texts");
+  
+      const excelBuffer = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+  
+      // Trigger Excel download
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "coded_texts.xlsx");
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      alert("Unsupported file type. Please choose 'csv' or 'xlsx'.");
+    }
   };
 
   const handleLogDownload = () => {
@@ -138,7 +164,7 @@ const FileManager = ({ fileName, texts, highlights, editLog, onDelete }) => {
         {fileName}
       </p>
 
-      <DownloadButton text="Download coded file" onDownload={handleFileDownload} />
+      <DownloadButton text="Download coded file" onDownload={() => handleFileDownload("xlsx")} />
       <DownloadButton text="Download logs" onDownload={handleLogDownload} />
       <DeleteFileButton onDelete={onDelete} />
     </div>
