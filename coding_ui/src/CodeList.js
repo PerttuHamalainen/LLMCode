@@ -57,7 +57,7 @@ const CodeList = ({ highlights, setHighlights, focusedOnAny }) => {
         ))
       ) : (
         <p style={{ color: "#333", fontSize: "14px", lineHeight: 1.6, margin: 0, padding: 0 }}>
-          Start coding by highlighting sections with your cursor and typing the relevant code(s) separated by a semicolon.
+          Start coding by highlighting sections with your cursor and typing the relevant code(s) separated by a semicolon. A highlight is specific to a single text, so ensure that your selection does not span across multiple texts.
         </p>
       )
     }

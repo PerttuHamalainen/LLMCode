@@ -86,14 +86,10 @@ function App() {
   const handleFileUpload = (res) => {
     // Save file name and texts
     setFileName(res.fileName);
-    const uploadedTexts = res.texts.map((text, idx) => ({
-      text: text,
-      depth: res.depths ? res.depths[idx] : 0, // If depths aren't uploaded, depth for each text is set to 0
-    }));
-    setTexts(uploadedTexts);
+    setTexts(res.data);
 
     // Initialise highlights with empty arrays for each text
-    setHighlights(Array.from({ length: res.texts.length }, () => []));
+    setHighlights(Array.from({ length: res.data.length }, () => []));
   }
 
   const handleFileDelete = () => {
@@ -191,7 +187,7 @@ function App() {
                     highlights={textHighlights}
                     setHighlights={(updateFunc) => setHighlightsForIdx(idx, updateFunc)}
                     focusedOnAny={focusedOnAny}
-                    createLog={(logData) => createLog({ ...logData, textId: idx })}
+                    createLog={(logData) => createLog({ ...logData, textId: item.id })}
                   />
 
                   {idx < texts.length - 1 && item.depth === texts[idx + 1].depth && (

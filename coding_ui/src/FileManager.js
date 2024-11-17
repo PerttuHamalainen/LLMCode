@@ -76,11 +76,15 @@ const FileManager = ({ fileName, texts, highlights, editLog, onDelete }) => {
     });
   
     // Prepare the data for PapaParse
-    const csvData = texts.map((item, idx) => ({
-      "text": item.text,
-      "coded_text": codedTexts[idx],
-    }));
-  
+    const csvData = texts.map((item, idx) => {
+      const { parentId, ...rest } = item;
+      return {
+        ...rest,
+        parent_id: parentId,  // Rename 'parentId' to 'parent_id'
+        coded_text: codedTexts[idx],
+      };
+    });
+
     // Convert the data to CSV and trigger download
     const csv = Papa.unparse(csvData);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
