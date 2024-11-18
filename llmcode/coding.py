@@ -936,7 +936,7 @@ def construct_inductive_prompt(text,
 - Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n"""
     
     # Add user-defined instructions
-    prompt += coding_instructions + "\n\n"
+    prompt += coding_instructions.strip() + "\n\n"
 
     # Optionally add existing codes into the prompt, to encourage consistency
     if code_descriptions is not None and len(code_descriptions) > 0:
