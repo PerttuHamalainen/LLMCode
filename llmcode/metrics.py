@@ -293,7 +293,7 @@ def run_coding_eval(llm_coded_texts, human_coded_texts, embedding_context, embed
     if sort_by.lower() == "iou":
         df_out.sort_values(by="IoU", ascending=False, inplace=True)
     elif sort_by.lower() == "hausdorff": 
-        df_out.sort_values(by="Hausdorff", ascending=False, inplace=True)
+        df_out.sort_values(by="Hausdorff", ascending=True, inplace=True)
     
     # Create html table output to show markdown
     df_html = df_out.copy()
