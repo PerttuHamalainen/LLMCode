@@ -94,7 +94,6 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
     // Ensure the selection is inside the text div only(textRef)
     const rootNode = textRef.current;
     if (!rootNode || !rootNode.contains(range.startContainer) || !rootNode.contains(range.endContainer)) {
-      window.getSelection().removeAllRanges();
       return;
     }
   

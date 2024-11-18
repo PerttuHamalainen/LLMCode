@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 
 const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focusedOnAny }) => {
   const [text, setText] = useState(highlight.codes || "");
-  const [cursorPosition, setCursorPosition] = useState(0);
+  const [cursorPosition, setCursorPosition] = useState(highlight.codes.length || 0);
   const [deleted, setDeleted] = useState(false);
   const divRef = useRef(null);
 
@@ -60,6 +60,7 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
     if (!deleted) {
       onTextChange(text);
       onFocusChange(false, text);
+      setCursorPosition(text.length);
     }
   };
 
@@ -72,7 +73,7 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
     if (highlight.focused) {
       restoreCursorPosition(cursorPosition);
     }
-  }, [highlight.codes, highlight.focused, cursorPosition]);
+  }, [text, highlight.focused, cursorPosition]);
 
   useEffect(() => {
     if (highlight.focused && divRef.current && document.activeElement !== divRef.current) {
