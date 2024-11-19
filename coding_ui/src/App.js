@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect } from "react";
 import CodingPane from './CodingPane';
 import CodeList from "./CodeList";
 import FileUpload from "./FileUpload";
@@ -58,6 +58,8 @@ function App() {
   };
 
   const createLog = (logData) => {
+    console.log("New log: ", logData)
+
     setEditLog((prevEntries) => {
       // Do not log highlights that never had any codes (that were instantly deleted)
       const prevLog = prevEntries.at(-1);
@@ -84,9 +86,10 @@ function App() {
   const handleFileUpload = (res) => {
     // Save file name and texts
     setFileName(res.fileName);
-    setTexts(res.texts);
+    setTexts(res.data);
+
     // Initialise highlights with empty arrays for each text
-    setHighlights(Array.from({ length: res.texts.length }, () => []));
+    setHighlights(Array.from({ length: res.data.length }, () => []));
   }
 
   const handleFileDelete = () => {
@@ -96,6 +99,20 @@ function App() {
     setHighlights([]);
     setEditLog([]);
   }
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "You may lose all progress on exiting the browser tab. Have you downloaded your codes and logs?";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup the event listener on component unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
 
   return (
     <div 
@@ -112,6 +129,8 @@ function App() {
           backgroundColor: "#f7f7f7",
           borderRight: "1px solid #ddd",
           padding: "50px 30px 50px 30px",
+          overflowY: "auto",
+          boxSizing: "border-box"
         }}
       >
         <div
@@ -137,7 +156,8 @@ function App() {
 
       <div
         style={{
-          marginLeft: "290px", // Prevents overlap with the fixed sidebar
+          marginLeft: "240px", // Prevents overlap with the fixed sidebar
+          padding: "30px 0px"
         }}
       >
         <div
@@ -146,30 +166,41 @@ function App() {
             flexDirection: "column",
           }}
         >
-          {texts.map((text, idx) => {
+          {texts.map((item, idx) => {
             const textHighlights = highlights[idx] || [];
             return (
-              <Fragment key={idx}>
-                <CodingPane 
-                  text={text} 
-                  highlights={textHighlights}
-                  setHighlights={(updateFunc) => setHighlightsForIdx(idx, updateFunc)}
-                  focusedOnAny={focusedOnAny}
-                  createLog={(logData) => createLog({ ...logData, textId: idx })}
-                />
-                {idx < texts.length - 1 && (
+              <div style={{display: "flex", gap: "20px", marginLeft: "50px"}} key={idx}>
+                {Array.from({ length: item.depth }).map((_, index) => (
                   <div
+                    key={index}
                     style={{
-                      flexGrow: 1, // Makes the line take up available space
-                      borderBottom: "1px dashed",
-                      borderColor: "#ddd",
-                      borderWidth: "1px",
-                      borderImage: "repeating-linear-gradient(to right, #ddd 0, #ddd 5px, transparent 5px, transparent 10px) 1",
-                      marginLeft: "50px"
+                      width: "1px",
+                      backgroundColor: "#ddd",
+                      margin: "0px 0",
                     }}
                   />
-                )}
-              </Fragment>
+                ))}
+
+                <div>
+                  <CodingPane 
+                    text={item.text} 
+                    highlights={textHighlights}
+                    setHighlights={(updateFunc) => setHighlightsForIdx(idx, updateFunc)}
+                    focusedOnAny={focusedOnAny}
+                    createLog={(logData) => createLog({ ...logData, textId: item.id })}
+                  />
+
+                  {idx < texts.length - 1 && item.depth === texts[idx + 1].depth && (
+                    <div
+                      style={{
+                        width: "50px",
+                        height: "1px",
+                        backgroundColor: "#ddd",
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>

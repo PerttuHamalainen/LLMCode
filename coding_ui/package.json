@@ -13,7 +13,8 @@
     "react-router-dom": "^6.28.0",
     "react-scripts": "5.0.1",
     "read-excel-file": "^5.8.6",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -45,5 +46,5 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "gh-pages": "^6.2.0"
   },
-  "homepage": "https://PerttuHamalainen.github.io/LLMCode/coding_ui"
+  "homepage": "https://PerttuHamalainen.github.io/LLMCode"
 }

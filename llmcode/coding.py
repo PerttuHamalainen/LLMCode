@@ -758,6 +758,8 @@ def code_inductively_with_code_consistency(texts,
                                            coding_instructions,
                                            few_shot_examples,
                                            gpt_model,
+                                           text_ancestors=None,
+                                           few_shot_ancestors=None,
                                            use_cache=True,
                                            max_tokens=None,
                                            verbose=False):
@@ -785,9 +787,11 @@ def code_inductively_with_code_consistency(texts,
 
         # Construct prompt, including a list of existing codes
         prompt = construct_inductive_prompt(
-            text=text, 
+            text=text,
+            text_ancestors=text_ancestors[idx] if text_ancestors else None,
             coding_instructions=coding_instructions,
             few_shot_examples=few_shot_examples,
+            few_shot_ancestors=few_shot_ancestors,
             code_descriptions=code_descriptions,
             insights=insights
         )
@@ -799,7 +803,7 @@ def code_inductively_with_code_consistency(texts,
             max_tokens=max_tokens,
             use_cache=use_cache
         )
-        
+
         # Attempt to correct any LLM formatting errors
         coded_text_batch = correct_coding_errors([text], continuations, verbose=verbose)
 
@@ -918,6 +922,8 @@ def _remove_code(text, code_to_remove):
 def construct_inductive_prompt(text,
                                coding_instructions,
                                few_shot_examples,
+                               text_ancestors=None,
+                               few_shot_ancestors=None,
                                code_descriptions=None,
                                insights=None,
                                ):
@@ -930,7 +936,7 @@ def construct_inductive_prompt(text,
 - Preserve exact formatting of the original text. Do not correct typos or remove unnecessary spaces.\n"""
     
     # Add user-defined instructions
-    prompt += coding_instructions + "\n\n"
+    prompt += coding_instructions.strip() + "\n\n"
 
     # Optionally add existing codes into the prompt, to encourage consistency
     if code_descriptions is not None and len(code_descriptions) > 0:
@@ -941,14 +947,31 @@ def construct_inductive_prompt(text,
         # Add each code as a new line
         prompt += "\n".join(code_desc_str) + "\n\n"
 
-    prompt += "Below, I first give you examples of the output you should produce given an example input. After that, I give you the actual input to process.\n\n"
+    prompt += "Below, I first give you examples of the output you should produce given an example input. After that, I give you the actual input to process."
+    if text_ancestors or few_shot_ancestors is not None:
+        prompt += " The input may come from a thread of texts, and any preceding texts are added as context (labelled CONTEXT). Your task is to code only the last text (labelled TEXT).\n\n"
+    else:
+        prompt += "\n\n"
 
     # Add the few-shot examples in random order
-    for _, row in few_shot_examples.sample(frac=1).iterrows():
-        prompt += f"EXAMPLE INPUT:\n{row.text}\n\n"
+    few_shot_examples = few_shot_examples.reset_index(drop=True)
+    for idx, row in few_shot_examples.sample(frac=1).iterrows():
+        prompt += f"EXAMPLE INPUT:\n"
+        if few_shot_ancestors is not None:
+            for ancestor_text in few_shot_ancestors[idx]:
+                prompt += f"CONTEXT: {ancestor_text}\n*****\n"
+            prompt += f"TEXT: {row.text}\n\n"
+        else:
+            prompt += f"{row.text}\n\n"
         prompt += f"EXAMPLE OUTPUT:\n{row.coded_text}\n\n"
 
-    prompt += f"ACTUAL INPUT:\n{text}"
+    if text_ancestors is not None:
+        prompt += f"ACTUAL INPUT:\n"
+        for ancestor_text in text_ancestors:
+            prompt += f"CONTEXT: {ancestor_text}\n*****\n"
+        prompt += f"TEXT: {text}"
+    else:
+        prompt += f"ACTUAL INPUT:\n{text}"
 
     if insights is not None:
         prompt += f"\n\nMAIN INSIGHTS:\n{insights}"

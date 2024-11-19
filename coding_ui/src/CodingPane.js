@@ -91,9 +91,9 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
     const range = selection.getRangeAt(0);
     const selectedString = selection.toString();
   
-    // Ensure the selection is inside the left div (textRef)
+    // Ensure the selection is inside the text div only(textRef)
     const rootNode = textRef.current;
-    if (!rootNode || !rootNode.contains(range.startContainer)) {
+    if (!rootNode || !rootNode.contains(range.startContainer) || !rootNode.contains(range.endContainer)) {
       return;
     }
   
@@ -177,19 +177,23 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
   };
 
   // Handler to update the focus of a specific code
-  const updateFocus = (focused, id) => {
+  const updateFocus = (focused, codes, id) => {
     // Handle logging for each highlight at blur
     if (!focused) {
-      const highlight = highlights.find((hl) => hl.id === id);
-      if (highlight.codes === "") {
+      if (codes === "") {
         createLog({
           event: "delete",
-          highlight: (({ id }) => ({ id }))(highlight)
+          highlight: { 
+            id: id 
+          }
         })
       } else {
         createLog({
           event: "edit",
-          highlight: (({ id, codes }) => ({ id, codes }))(highlight)
+          highlight: { 
+            id: id,
+            codes: codes,
+          }
         })
       }
     }
@@ -198,7 +202,7 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
     setHighlights((prevHighlights) =>
       prevHighlights
         .map((hl) => (hl.id === id ? { ...hl, focused: focused } : hl))
-        .filter((hl) => !(hl.id === id && !focused && hl.codes === ""))
+        .filter((hl) => !(hl.id === id && !focused && codes === ""))
     );
   };
 
@@ -253,7 +257,7 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
   };
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px", padding: "50px"}} onMouseUp={handleTextSelect}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px", padding: "20px 0px"}} onMouseUp={handleTextSelect}>
       <div
         style={{
           width: "600px",
@@ -285,7 +289,7 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
               <CodeLabel
                 highlight={hl}
                 onTextChange={(newText) => updateCodes(newText, hl.id)}
-                onFocusChange={(focused) => updateFocus(focused, hl.id)}
+                onFocusChange={(focused, text) => updateFocus(focused, text, hl.id)}
                 onHoverChange={(hovered) => updateHover(hovered, hl.id)}
                 focusedOnAny={focusedOnAny}
                 key={hl.id}
