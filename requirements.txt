@@ -10,3 +10,5 @@ seaborn
 mne==0.24.1
 hdbscan
 tiktoken
+levenshtein
+titlecase
