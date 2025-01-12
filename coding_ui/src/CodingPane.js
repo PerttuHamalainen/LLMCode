@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect } from "react";
 import './CodingPane.css';
 import CodeLabel from "./CodeLabel";
+import ToggleButton from "./components/ToggleButton";
 
-const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }) => {
+const CodingPane = ({ text, isAnnotated, isExample, highlights, setHighlights, focusedOnAny, createLog, setAnnotated, setExample }) => {
   const textRef = useRef(null);
 
   // Group highlights based on their position in the text for displaying in the UI
@@ -265,46 +266,70 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
   };
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px", padding: "20px 0px"}} onMouseUp={handleTextSelect}>
-      <div
-        style={{
-          width: "600px",
-          textAlign: "left",
-          lineHeight: "2.2",
-        }}
-        ref={textRef}
-      >
-        <p style={{ margin: 0, padding: 0 }}>{renderHighlightedText(text, highlights)}</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "20px 0px" }}>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <ToggleButton
+          isActive={isAnnotated}
+          onToggle={() => setAnnotated(!isAnnotated)}
+          activeText="Annotated"
+          inactiveText="Mark as annotated"
+          activeColor="#90ee90"
+        />
+        <ToggleButton
+          isActive={isExample}
+          onToggle={() => {
+            setExample(!isExample)
+            if (!isExample && !isAnnotated) {
+              setAnnotated(true)
+            }
+          }}
+          activeText="Example"
+          inactiveText="Mark as example"
+          activeColor="#d8b4ff"
+        />
       </div>
 
-      <div
-        style={{
-          position: "relative",
-          minWidth: "400px",
-        }}
-      >
-        {groupedHighlights.map((hlGroup, groupIndex) => (
-          <div
-            style={{
-              position: "absolute",
-              top: hlGroup[0].y - 5, // Position the group based on the Y coordinate
-              display: "flex",
-              gap: "6px",
-            }}
-            key={groupIndex}
-          >
-            {hlGroup.map((hl) => (
-              <CodeLabel
-                highlight={hl}
-                onTextChange={(newText) => updateCodes(newText, hl.id)}
-                onFocusChange={(focused, text) => updateFocus(focused, text, hl.id)}
-                onHoverChange={(hovered) => updateHover(hovered, hl.id)}
-                focusedOnAny={focusedOnAny}
-                key={hl.id}
-              />
-            ))}
-          </div>
-        ))}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px" }} onMouseUp={handleTextSelect}>
+        <div
+          style={{
+            width: "600px",
+            textAlign: "left",
+            lineHeight: "2.2",
+          }}
+          ref={textRef}
+        >
+          <p style={{ margin: 0, padding: 0 }}>{renderHighlightedText(text, highlights)}</p>
+        </div>
+
+        <div
+          style={{
+            position: "relative",
+            minWidth: "400px",
+          }}
+        >
+          {groupedHighlights.map((hlGroup, groupIndex) => (
+            <div
+              style={{
+                position: "absolute",
+                top: hlGroup[0].y - 5, // Position the group based on the Y coordinate
+                display: "flex",
+                gap: "6px",
+              }}
+              key={groupIndex}
+            >
+              {hlGroup.map((hl) => (
+                <CodeLabel
+                  highlight={hl}
+                  onTextChange={(newText) => updateCodes(newText, hl.id)}
+                  onFocusChange={(focused, text) => updateFocus(focused, text, hl.id)}
+                  onHoverChange={(hovered) => updateHover(hovered, hl.id)}
+                  focusedOnAny={focusedOnAny}
+                  key={hl.id}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

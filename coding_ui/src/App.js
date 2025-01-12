@@ -4,6 +4,8 @@ import CodeList from "./CodeList";
 import FileUpload from "./FileUpload";
 import './App.css';
 import FileManager from "./FileManager";
+import CodingStats from "./CodingStats";
+import { initializeClient, queryLLM } from "./llmcode/LLM";
 
 function App() {
   const [fileName, setFileName] = useState(() => {
@@ -51,6 +53,21 @@ function App() {
     localStorage.setItem("editLog", JSON.stringify(editLog));
   }, [editLog]);
 
+  const [apiKey, setApiKey] = useState(() => {
+    const savedKey = localStorage.getItem("apiKey");
+    initializeClient(savedKey);
+    return savedKey ? savedKey : "";
+  });
+  useEffect(() => {
+    initializeClient(apiKey);
+    localStorage.setItem("apiKey", apiKey);
+  }, [apiKey]);
+
+  const codeWithLLM = async () => {
+    const res = await queryLLM("Hello LLM!");
+    console.log(res);
+  }
+
   const setHighlightsForIdx = (idx, updateFunc) => {
     setHighlights((prevHighlights) =>
       prevHighlights.map((hl, i) => (i === idx ? updateFunc(hl) : hl))
@@ -96,6 +113,18 @@ function App() {
     setTexts([]);
     setHighlights([]);
     setEditLog([]);
+  }
+
+  const setAnnotated = (idx, isAnnotated) => {
+    setTexts((prevEntries) => {
+      return prevEntries.map((item, itemIdx) => itemIdx == idx ? { ...item, isAnnotated: isAnnotated } : item )
+    });
+  }
+
+  const setExample = (idx, isExample) => {
+    setTexts((prevEntries) => {
+      return prevEntries.map((item, itemIdx) => itemIdx == idx ? { ...item, isExample: isExample } : item )
+    });
   }
 
   useEffect(() => {
@@ -146,6 +175,8 @@ function App() {
             <FileManager fileName={fileName} texts={texts} highlights={highlights} editLog={editLog} onDelete={handleFileDelete} />
           )}
         </div>
+
+        <CodingStats texts={texts} minAnnotated={40} minExamples={3} onButtonClick={codeWithLLM} apiKey={apiKey} setApiKey={setApiKey} />
         
         { texts.length > 0 &&
           <CodeList highlights={highlights.flat()} focusedOnAny={focusedOnAny} />
@@ -182,10 +213,14 @@ function App() {
                 <div>
                   <CodingPane 
                     text={item.text} 
+                    isAnnotated={item.isAnnotated}
+                    isExample={item.isExample}
                     highlights={textHighlights}
                     setHighlights={(updateFunc) => setHighlightsForIdx(idx, updateFunc)}
                     focusedOnAny={focusedOnAny}
                     createLog={(logData) => createLog({ ...logData, textId: item.id })}
+                    setAnnotated={(isAnnotated) => setAnnotated(idx, isAnnotated)}
+                    setExample={(isExample) => setExample(idx, isExample)}
                   />
 
                   {idx < texts.length - 1 && item.depth === texts[idx + 1].depth && (
