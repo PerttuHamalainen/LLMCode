@@ -15,6 +15,48 @@ const FileUpload = ({ onUpload }) => {
       const sizeInBytes = blob.size;
       return sizeInBytes;
     };
+
+    const parseTextHighlights = (text) => {
+      // Regular expression to match **highlight**<sup>codes</sup>
+      const pattern = /\*\*([\s\S]*?)\*\*<sup>(.*?)<\/sup>/g;
+
+      // Initialize results and plainText
+      const highlights = [];
+      let plainText = "";
+      let currentOffset = 0;
+
+      // Process all matches
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const [fullMatch, highlight, codes] = match;
+
+        // Compute the plain text up to the current match
+        plainText += text.slice(currentOffset, match.index) + highlight;
+
+        // Compute the startIndex and endIndex in the plain text
+        const startIndex = plainText.length - highlight.length;
+        const endIndex = plainText.length;
+
+        // Add the match details to the results
+        highlights.push({
+          id: crypto.randomUUID(),
+          startIndex,
+          endIndex,
+          codes,
+          text: highlight,
+          focused: false,
+          hovered: false,
+        });
+
+        // Update the offset to continue parsing
+        currentOffset = match.index + fullMatch.length;
+      }
+
+      // Append any remaining text after the last match
+      plainText += text.slice(currentOffset);
+
+      return { plainText: plainText, textHighlights: highlights };
+    };
   
     const parseData = (rows, fileName) => {
       if (!rows || rows.length === 0) {
@@ -36,6 +78,7 @@ const FileUpload = ({ onUpload }) => {
       }
     
       const data = [];
+      const highlights = [];
       let idCounter = 0;
     
       // Parse each row (starting from the second row)
@@ -47,15 +90,18 @@ const FileUpload = ({ onUpload }) => {
         const id = idIndex !== -1 ? row[idIndex] || null : `${idCounter++}`;
         const depth = depthIndex !== -1 ? parseInt(row[depthIndex], 10) : 0;
         const parentId = parentIdIndex !== -1 ? row[parentIdIndex] || null : null;
+
+        // Parse and remove any highlights from text
+        let { plainText, textHighlights } = parseTextHighlights(text);
+        highlights.push(textHighlights);
     
-        // Create an object for the current row
+        // Create a text item for the current row
         const item = {
           id,
-          text,
+          text: plainText,
           depth: isNaN(depth) ? 0 : depth, // Default depth to 0 if invalid
           parentId,
         };
-    
         data.push(item);
       }
 
@@ -66,7 +112,7 @@ const FileUpload = ({ onUpload }) => {
 
       if (sizeInBytes < sizeLimit) {
         console.log(`Object size is ${(sizeInBytes / 1024).toFixed(2)} KB. Safe to store and process in localStorage.`);
-        onUpload({ fileName, data });
+        onUpload({ fileName, data, highlights });
       } else {
         alert(`File size (${(sizeInBytes / 1024).toFixed(2)} KB) exceeds the ${(sizeLimit / 1024).toFixed(2)} KB limit.`);
       }
@@ -107,7 +153,7 @@ const FileUpload = ({ onUpload }) => {
         onChange={handleFileUpload}
         style={{ marginBottom: "10px" }}
       />
-      <p style={{ color: "#333", fontSize: "14px", lineHeight: 1.6 }}>Upload a CSV or Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.</p>
+      <p style={{ color: "#333", fontSize: "14px", lineHeight: 1.6 }}>Upload a CSV or Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>Any existing code annotations of the form **highlight**&lt;sup&gt;codes&lt;/sup&gt; in the texts will be automatically parsed by the system.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.</p>
     </div>
   );
 };

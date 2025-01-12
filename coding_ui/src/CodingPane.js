@@ -8,48 +8,56 @@ const CodingPane = ({ text, highlights, setHighlights, focusedOnAny, createLog }
   // Group highlights based on their position in the text for displaying in the UI
   const [groupedHighlights, setGroupedHighlights] = useState([]);
   useEffect(() => {
-    const getYCoordinate = (index, textRef) => {
-      const rootNode = textRef.current;
-      if (!rootNode) return null;
-    
-      let currentIndex = 0;
-      let targetNode = null;
-      let offsetInNode = 0;
-    
-      // Traverse text nodes to find the correct one
-      const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, null, false);
-    
+    function findNodeForIndex(root, targetIndex) {
+      let index = targetIndex;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
       while (walker.nextNode()) {
-        const textNode = walker.currentNode;
-        const nodeLength = textNode.textContent.length;
-    
-        if (currentIndex + nodeLength >= index) {
-          targetNode = textNode;
-          offsetInNode = index - currentIndex;
-          break;
+        const currentNode = walker.currentNode;
+        const length = currentNode.textContent.length;
+
+        if (index < length) {
+          // The character index is within this text node
+          return { node: currentNode, offset: index };
         }
-    
-        currentIndex += nodeLength;
+        // Otherwise, skip this entire text node and decrement the index
+        index -= length;
       }
-    
-      if (!targetNode) {
-        console.error("Start index out of bounds.");
-        return null;
+
+      // If index is out of range, return the last text node with offset at the end
+      return { node: null, offset: 0 };
+    }
+
+    function getYCoordinate(charIndex, textRef) {
+      const root = textRef.current;
+
+      // Find the text node and offset where this index lands
+      const { node, offset } = findNodeForIndex(root, charIndex);
+
+      // If we couldn’t find a text node (index out of range), return 0 or handle accordingly
+      if (!node) {
+        return 0;
       }
-    
-      // Create a Range object
+
+      // Create a range that starts and ends at the exact character position
       const range = document.createRange();
-      range.setStart(targetNode, offsetInNode);
-      range.setEnd(targetNode, offsetInNode);
-    
-      // Get the bounding rects of the range and the parent div
-      const rangeRect = range.getBoundingClientRect();
-      const parentRect = rootNode.getBoundingClientRect();
-    
-      // Calculate the Y coordinate relative to the parent div
-      const relativeY = rangeRect.top - parentRect.top;
-      return relativeY;
-    };
+      range.setStart(node, offset);
+      range.setEnd(node, offset);
+
+      // Measure the bounding rectangle of this zero-width range
+      const rects = range.getClientRects();
+
+      if (!rects.length) {
+        return 0;
+      }
+
+      // Calculate Y coordinate relative to the top of the container element
+      const containerRect = root.getBoundingClientRect();
+      const charRect = rects[0]; 
+      const yCoord = charRect.top - containerRect.top;
+
+      return yCoord;
+    }
     
     const groupHighlights = (highlights, textRef) => {
       // Populate y values for highlights using getYCoordinate with hl.startIndex as input

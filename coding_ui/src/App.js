@@ -84,12 +84,10 @@ function App() {
   };
 
   const handleFileUpload = (res) => {
-    // Save file name and texts
+    // Save uploaded data to state
     setFileName(res.fileName);
     setTexts(res.data);
-
-    // Initialise highlights with empty arrays for each text
-    setHighlights(Array.from({ length: res.data.length }, () => []));
+    setHighlights(res.highlights);
   }
 
   const handleFileDelete = () => {
