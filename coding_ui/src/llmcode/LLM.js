@@ -23,7 +23,7 @@ export async function queryLLM(prompt, model, maxTokens) {
         { role: "system", content: "You are a helpful assistant." },
         { role: "user", content: prompt },
       ],
-      maxTokens: maxTokens,
+      max_tokens: maxTokens,
     });
 
     return completion.choices[0].message.content;

@@ -6,6 +6,8 @@ import './App.css';
 import FileManager from "./FileManager";
 import CodingStats from "./CodingStats";
 import { initializeClient, queryLLM } from "./llmcode/LLM";
+import { codeInductivelyWithCodeConsistency } from "./llmcode/Coding";
+import { formatTextWithHighlights } from "./helpers";
 
 function App() {
   const [fileName, setFileName] = useState(() => {
@@ -63,9 +65,54 @@ function App() {
     localStorage.setItem("apiKey", apiKey);
   }, [apiKey]);
 
+  const [researchQuestion, setResearchQuestion] = useState(() => {
+    const savedRq = localStorage.getItem("researchQuestion");
+    return savedRq ? savedRq : "";
+  });
+  useEffect(() => {
+    localStorage.setItem("researchQuestion", researchQuestion);
+  }, [researchQuestion]);
+
+  const getTextAncestors = (parentId) => {
+    const parentText = texts.find((item) => item.id === parentId);
+    if (!parentText.parentId) {
+      return [parentText.text];
+    }
+    const ancestors = getTextAncestors(parentText.parentId);
+    return [...ancestors, parentText.text];
+  };
+
   const codeWithLLM = async () => {
-    const res = await queryLLM("Hello LLM!");
-    console.log(res);
+    const textsWithHighlights = texts.map((item, idx) => ({
+      item: item,
+      highlights: highlights[idx],
+    }));
+
+    // Construct input texts with ancestors
+    const inputTexts = textsWithHighlights.filter(({ item }) => item.isAnnotated && !item.isExample).slice(0, 3);  // TODO!!! For now only take first 5
+    const inputs = inputTexts.map(({ item }) => ({
+      text: item.text,
+      ancestors: item.parentId ? getTextAncestors(item.parentId) : [],
+    }));
+
+    // Construct examples with ancestors
+    const exampleTexts = textsWithHighlights.filter(({ item }) => item.isExample);
+    const examples = exampleTexts.map(({ item, highlights }) => ({
+      text: item.text,
+      codedText: formatTextWithHighlights(item.text, highlights),
+      ancestors: item.parentId ? getTextAncestors(item.parentId) : [],
+    }));
+
+    // Run LLM coding
+    const { codedTexts, codeDescriptions } = await codeInductivelyWithCodeConsistency(
+      inputs,
+      examples,
+      researchQuestion,
+      "gpt-4o",
+    );
+
+    console.log(codedTexts);
+    console.log(codeDescriptions);
   }
 
   const setHighlightsForIdx = (idx, updateFunc) => {
@@ -172,11 +219,19 @@ function App() {
           { texts.length === 0 ? (
             <FileUpload onUpload={handleFileUpload} />
           ) : (
-            <FileManager fileName={fileName} texts={texts} highlights={highlights} editLog={editLog} onDelete={handleFileDelete} />
+            <FileManager
+              fileName={fileName}
+              texts={texts}
+              highlights={highlights}
+              editLog={editLog}
+              onDelete={handleFileDelete}
+              researchQuestion={researchQuestion}
+              setResearchQuestion={setResearchQuestion}
+            />
           )}
         </div>
 
-        <CodingStats texts={texts} minAnnotated={40} minExamples={3} onButtonClick={codeWithLLM} apiKey={apiKey} setApiKey={setApiKey} />
+        <CodingStats texts={texts} minAnnotated={40} minExamples={3} onButtonClick={codeWithLLM} apiKey={apiKey} setApiKey={setApiKey} researchQuestion={researchQuestion} />
         
         { texts.length > 0 &&
           <CodeList highlights={highlights.flat()} focusedOnAny={focusedOnAny} />

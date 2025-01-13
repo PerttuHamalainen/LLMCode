@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const CodingStats = ({ texts, minAnnotated, minExamples, onButtonClick, apiKey, setApiKey }) => {
+const CodingStats = ({ texts, minAnnotated, minExamples, onButtonClick, apiKey, setApiKey, researchQuestion }) => {
   const [isKeySubmitted, setIsKeySubmitted] = useState(() => apiKey.trim() !== "");
   const annotatedCount = texts.filter((obj) => obj.isAnnotated).length;
   const exampleCount = texts.filter((obj) => obj.isExample).length;
@@ -8,7 +8,8 @@ const CodingStats = ({ texts, minAnnotated, minExamples, onButtonClick, apiKey, 
   const isButtonDisabled =
     annotatedCount < minAnnotated ||
     exampleCount < minExamples ||
-    !isKeySubmitted;
+    !isKeySubmitted ||
+    researchQuestion.trim() === "";
 
   const handleApiKeySubmit = () => {
     setIsKeySubmitted(true);
@@ -139,7 +140,7 @@ const CodingStats = ({ texts, minAnnotated, minExamples, onButtonClick, apiKey, 
         {isButtonDisabled && (
           <p style={{ color: "gray", fontSize: "12px", marginTop: "10px" }}>
             You need at least {minAnnotated} annotated texts,{" "}
-            {minExamples} examples, and a valid API key to use this feature.
+            {minExamples} examples, a research question, and an API key to use this feature.
           </p>
         )}
       </div>

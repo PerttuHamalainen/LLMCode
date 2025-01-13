@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { formatTextWithHighlights } from "./helpers";
 
 const DownloadButton = ({ text, onDownload }) => {
   return (
@@ -38,38 +39,7 @@ const DeleteFileButton = ({ onDelete }) => {
   );
 };
 
-const FileManager = ({ fileName, texts, highlights, editLog, onDelete }) => {
-  const formatTextWithHighlights = (text, highlights) => {
-    // Sort highlights by startIndex to process them in order
-    const sortedHighlights = [...highlights].sort((a, b) => a.startIndex - b.startIndex);
-  
-    let result = "";
-    let currentIndex = 0;
-  
-    sortedHighlights.forEach((hl) => {
-      const { startIndex, endIndex, codes } = hl;
-  
-      // Append text before the current highlight
-      if (currentIndex < startIndex) {
-        result += text.slice(currentIndex, startIndex);
-      }
-  
-      // Wrap the highlighted text with double asterisks and add the <sup> tag
-      const highlightedText = text.slice(startIndex, endIndex);
-      result += `**${highlightedText}**<sup>${codes}</sup>`;
-  
-      // Update the current index
-      currentIndex = endIndex;
-    });
-  
-    // Append any remaining text after the last highlight
-    if (currentIndex < text.length) {
-      result += text.slice(currentIndex);
-    }
-  
-    return result;
-  };
-
+const FileManager = ({ fileName, texts, highlights, editLog, onDelete, researchQuestion, setResearchQuestion }) => {
   const handleFileDownload = (fileType) => {
     const codedTexts = texts.map((item, idx) => {
       const textHighlights = highlights[idx];
@@ -163,10 +133,28 @@ const FileManager = ({ fileName, texts, highlights, editLog, onDelete }) => {
       }}>
         {fileName}
       </p>
-
+      
       <DownloadButton text="Download coded file" onDownload={() => handleFileDownload("xlsx")} />
       <DownloadButton text="Download logs" onDownload={handleLogDownload} />
       <DeleteFileButton onDelete={onDelete} />
+
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <p style={{ fontSize: "14px" }}>Research question:</p>
+        <input
+        type="text"
+        value={researchQuestion}
+        onChange={(e) => setResearchQuestion(e.target.value)}
+        placeholder="Enter research question"
+        style={{
+          width: "100%",
+          flex: 1,
+          padding: "5px",
+          border: "1px solid #ccc",
+          borderRadius: "3px",
+          boxSizing: "border-box",
+        }}
+      />
+      </div>
     </div>
   );
 };
