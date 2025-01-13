@@ -1,6 +1,6 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { formatTextWithHighlights } from "./helpers";
+import { formatTextWithHighlights } from "./Helpers";
 
 const DownloadButton = ({ text, onDownload }) => {
   return (

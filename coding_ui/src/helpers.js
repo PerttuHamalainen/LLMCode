@@ -28,3 +28,12 @@ export const formatTextWithHighlights = (text, highlights) => {
   
     return result;
   };
+
+  export function nanMean(arr) {
+    const filtered = arr.filter((value) => !isNaN(value)); // Filter out NaN values
+    if (filtered.length === 0) {
+      return NaN; // Return NaN if all values are NaN
+    }
+    const sum = filtered.reduce((acc, value) => acc + value, 0);
+    return sum / filtered.length; // Compute mean
+  }

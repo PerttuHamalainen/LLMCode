@@ -5,9 +5,10 @@ import FileUpload from "./FileUpload";
 import './App.css';
 import FileManager from "./FileManager";
 import CodingStats from "./CodingStats";
-import { initializeClient, queryLLM } from "./llmcode/LLM";
+import { initializeClient } from "./llmcode/LLM";
 import { codeInductivelyWithCodeConsistency } from "./llmcode/Coding";
-import { formatTextWithHighlights } from "./helpers";
+import { formatTextWithHighlights, nanMean } from "./Helpers";
+import { runCodingEval } from "./llmcode/Metrics";
 
 function App() {
   const [fileName, setFileName] = useState(() => {
@@ -104,15 +105,29 @@ function App() {
     }));
 
     // Run LLM coding
-    const { codedTexts, codeDescriptions } = await codeInductivelyWithCodeConsistency(
+    const { codedTexts: modelCodedTexts } = await codeInductivelyWithCodeConsistency(
       inputs,
       examples,
       researchQuestion,
       "gpt-4o",
     );
 
-    console.log(codedTexts);
-    console.log(codeDescriptions);
+    console.log(modelCodedTexts);
+
+    // Eval against human codes
+    const humanCodedTexts = inputTexts.map(({ item, highlights }) => formatTextWithHighlights(item.text, highlights));
+    console.log(humanCodedTexts);
+
+    const embeddingContext = `, in the context of the research question: ${researchQuestion}`;
+    const { IoUs, hausdorffDistances } = await runCodingEval(
+      humanCodedTexts,
+      modelCodedTexts,
+      embeddingContext,
+      "text-embedding-3-large"
+    );
+
+    console.log(nanMean(IoUs), IoUs);
+    console.log(nanMean(hausdorffDistances), hausdorffDistances);
   }
 
   const setHighlightsForIdx = (idx, updateFunc) => {

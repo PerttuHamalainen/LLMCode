@@ -32,3 +32,27 @@ export async function queryLLM(prompt, model, maxTokens) {
     throw error;
   }
 }
+
+export async function embed(texts, model, batchSize=32) {
+  const escapedTexts = texts.map((text) => JSON.stringify(text));
+
+  const embedMatrix = [];
+  for (let i = 0; i < escapedTexts.length; i += batchSize) {
+    // Get the current batch
+    const embedBatch = escapedTexts.slice(i, Math.min(escapedTexts.length, i + batchSize));
+
+    // Call the embedding API for the current batch
+    const embeddings = await client.embeddings.create({
+      input: embedBatch,
+      model: model,
+    });
+
+    // Append embeddings to the result matrix
+    embeddings.data.forEach((item) => {
+      embedMatrix.push(item.embedding);
+    });
+  }
+  return embedMatrix;
+}
+
+  
