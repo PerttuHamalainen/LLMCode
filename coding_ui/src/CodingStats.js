@@ -43,24 +43,6 @@ const CodingStats = ({ texts, minAnnotated, minExamples, onButtonClick, apiKey, 
         <p style={{ margin: 0, padding: 0 }}>{exampleCount}</p>
       </div>
 
-      {/* <div style={{ paddingTop: "20px" }}>
-        <input
-          type="text"
-          id="api-key"
-          value={apiKey}
-          onChange={handleApiKeyChange}
-          placeholder="Enter your API key"
-          style={{
-            width: "100%",
-            padding: "5px",
-            marginTop: "5px",
-            marginBottom: "10px",
-            border: "1px solid #ccc",
-            borderRadius: "3px",
-            boxSizing: "border-box",
-          }}
-        />
-      </div> */}
       {!isKeySubmitted ? (
         <div style={{ display: "flex", gap: "5px", marginTop: "5px" }}>
         <input
