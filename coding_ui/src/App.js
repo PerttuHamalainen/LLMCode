@@ -78,9 +78,9 @@ function App() {
 
   const codeWithLLM = async () => {
     // Remove any previous model highlights
-    texts.forEach(({ id }) => {
-      setHighlightsForId(id, (hls) => hls.filter((hl) => hl.type !== "model"));
-    });
+    setTexts((prevTexts) =>
+      prevTexts.map((t) => ({ ...t, highlights: t.highlights.filter((hl) => hl.type !== "model") }))
+    );
 
     // Construct input texts with ancestors
     const inputTexts = texts.filter(({ isAnnotated, isExample }) => isAnnotated && !isExample).slice(0, 30);  // TODO!!! For now only take first 30
@@ -94,7 +94,7 @@ function App() {
     const examples = exampleTexts.map(({ id, text, parentId, highlights }) => ({
       id,
       text,
-      codedText: formatTextWithHighlights(text, highlights),
+      codedText: formatTextWithHighlights(text, highlights.filter((hl) => hl.type === "human")),
       ancestors: parentId ? getAncestors(parentId) : [],
     }));
 
@@ -115,7 +115,9 @@ function App() {
     console.log(modelCodedTexts);
 
     // Eval against human codes
-    const humanCodedTexts = inputTexts.map(({ text, highlights }) => formatTextWithHighlights(text, highlights));
+    const humanCodedTexts = inputTexts.map(({ text, highlights }) => (
+      formatTextWithHighlights(text, highlights.filter((hl) => hl.type === "human"))
+    ));
     console.log(humanCodedTexts);
 
     const embeddingContext = `, in the context of the research question: ${researchQuestion}`;
@@ -196,6 +198,7 @@ function App() {
     setFileName("");
     setTexts([]);
     setEditLog([]);
+    setEvalSession(null);
   }
 
   const setAnnotated = (id, isAnnotated) => {
