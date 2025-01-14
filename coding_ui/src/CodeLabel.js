@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
+import { HUMAN_HL_COLOR, HUMAN_HL_COLOR_ACTIVE, MODEL_HL_COLOR, MODEL_HL_COLOR_ACTIVE } from "./colors";
 
 const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focusedOnAny }) => {
   const [text, setText] = useState(highlight.codes || "");
   const [cursorPosition, setCursorPosition] = useState(highlight.codes.length || 0);
   const [deleted, setDeleted] = useState(false);
   const divRef = useRef(null);
+
+  const baseColor = highlight.type === "human" ? HUMAN_HL_COLOR : MODEL_HL_COLOR;
+  const activeColor = highlight.type === "human" ? HUMAN_HL_COLOR_ACTIVE : MODEL_HL_COLOR_ACTIVE;
 
   const getCursorPosition = () => {
     const selection = window.getSelection();
@@ -89,7 +93,7 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
         ref={divRef}
         style={{
           display: "inline-block",
-          backgroundColor: highlight.focused || (!focusedOnAny && highlight.hovered) ? "#c7e3ff" : "#f0f0f0",
+          backgroundColor: highlight.focused || (!focusedOnAny && highlight.hovered) ? activeColor : baseColor,
           borderRadius: "8px",
           padding: "5px 8px",
           color: text ? "black" : "#aaa",
@@ -98,7 +102,7 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
           overflow: "hidden",
           textOverflow: "ellipsis",
         }}
-        contentEditable={true}
+        contentEditable={highlight.type === "human"}
         suppressContentEditableWarning={true}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
@@ -118,7 +122,7 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
             width: "20px",
             height: "20px",
             borderRadius: "50%",
-            backgroundColor: "#c7e3ff",
+            backgroundColor: HUMAN_HL_COLOR_ACTIVE,
             color: "black",
             border: "none",
             display: "flex",

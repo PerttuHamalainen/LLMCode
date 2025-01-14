@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from "react";
 import CodingPane from './CodingPane';
+import EvalPane from "./EvalPane";
 import CodeList from "./CodeList";
 import FileUpload from "./FileUpload";
 import './App.css';
 import FileManager from "./FileManager";
+import CodingStats from "./CodingStats";
+import { initializeClient } from "./llmcode/LLM";
+import { codeInductivelyWithCodeConsistency } from "./llmcode/Coding";
+import { formatTextWithHighlights, nanMean, parseTextHighlights } from "./helpers";
+import { runCodingEval } from "./llmcode/Metrics";
 
 function App() {
   const [fileName, setFileName] = useState(() => {
@@ -26,20 +32,10 @@ function App() {
     localStorage.setItem("texts", JSON.stringify(texts));
   }, [texts]);
 
-  const [highlights, setHighlights] = useState(() => {
-    // Load highlights from local storage if available
-    const savedHighlights = localStorage.getItem("highlights");
-    return savedHighlights ? JSON.parse(savedHighlights) : [];
-  });
-  useEffect(() => {
-    // Save highlights to local storage whenever it changes
-    localStorage.setItem("highlights", JSON.stringify(highlights));
-  }, [highlights]);
-
   const [focusedOnAny, setFocusedOnAny] = useState(false);
   useEffect(() => {
-    setFocusedOnAny(highlights.flat().some((h) => h.focused));
-  }, [highlights]);
+    setFocusedOnAny(texts.some((t) => t.highlights.some((h) => h.focused)));
+  }, [texts]);
 
   const [editLog, setEditLog] = useState(() => {
     // Load file name from local storage if available
@@ -51,9 +47,118 @@ function App() {
     localStorage.setItem("editLog", JSON.stringify(editLog));
   }, [editLog]);
 
-  const setHighlightsForIdx = (idx, updateFunc) => {
-    setHighlights((prevHighlights) =>
-      prevHighlights.map((hl, i) => (i === idx ? updateFunc(hl) : hl))
+  const [apiKey, setApiKey] = useState(() => {
+    const savedKey = localStorage.getItem("apiKey");
+    initializeClient(savedKey);
+    return savedKey ? savedKey : "";
+  });
+  useEffect(() => {
+    initializeClient(apiKey);
+    localStorage.setItem("apiKey", apiKey);
+  }, [apiKey]);
+
+  const [researchQuestion, setResearchQuestion] = useState(() => {
+    const savedRq = localStorage.getItem("researchQuestion");
+    return savedRq ? savedRq : "";
+  });
+  useEffect(() => {
+    localStorage.setItem("researchQuestion", researchQuestion);
+  }, [researchQuestion]);
+
+  const [evalSession, setEvalSession] = useState({
+    examples: null,
+    results: null
+  });
+
+  const getAncestors = (parentId) => {
+    const parentText = texts.find((item) => item.id === parentId);
+    if (!parentText.parentId) {
+      return [parentText.text];
+    }
+    const ancestors = getAncestors(parentText.parentId, texts);
+    return [...ancestors, parentText.text];
+  };
+
+  const codeWithLLM = async () => {
+    // Remove any previous model highlights
+    texts.forEach(({ id }) => {
+      setHighlightsForId(id, (hls) => hls.filter((hl) => hl.type !== "model"));
+    });
+
+    // Construct input texts with ancestors
+    const inputTexts = texts.filter(({ isAnnotated, isExample }) => isAnnotated && !isExample).slice(0, 30);  // TODO!!! For now only take first 30
+    const inputs = inputTexts.map(({ text, parentId }) => ({
+      text: text,
+      ancestors: parentId ? getAncestors(parentId) : [],
+    }));
+
+    // Construct examples with ancestors
+    const exampleTexts = texts.filter(({ isExample }) => isExample);
+    const examples = exampleTexts.map(({ id, text, parentId, highlights }) => ({
+      id,
+      text,
+      codedText: formatTextWithHighlights(text, highlights),
+      ancestors: parentId ? getAncestors(parentId) : [],
+    }));
+
+    // Start new eval session
+    setEvalSession({
+      examples: examples,
+      results: null
+    });
+
+    // Run LLM coding
+    const { codedTexts: modelCodedTexts } = await codeInductivelyWithCodeConsistency(
+      inputs,
+      examples,
+      researchQuestion,
+      "gpt-4o",
+    );
+
+    console.log(modelCodedTexts);
+
+    // Eval against human codes
+    const humanCodedTexts = inputTexts.map(({ text, highlights }) => formatTextWithHighlights(text, highlights));
+    console.log(humanCodedTexts);
+
+    const embeddingContext = `, in the context of the research question: ${researchQuestion}`;
+    const { ious, hausdorffDistances } = await runCodingEval(
+      humanCodedTexts,
+      modelCodedTexts,
+      embeddingContext,
+      "text-embedding-3-large"
+    );
+
+    // Add model highlights
+    inputTexts.forEach(({ id }, idx) => {
+      var { textHighlights: modelHighlights } = parseTextHighlights(modelCodedTexts[idx]);
+      modelHighlights = modelHighlights.map((hl) => ({ ...hl, type: "model" }));
+      setHighlightsForId(id, (hls) => [...hls, ...modelHighlights]);
+    });
+
+    // Store results for eval session
+    setEvalSession((value) => ({
+      ...value,
+      results: inputTexts.reduce((acc, { id }, idx) => {
+        const { textHighlights: humanHighlights } = parseTextHighlights(humanCodedTexts[idx]);
+        const { textHighlights: modelHighlights } = parseTextHighlights(modelCodedTexts[idx]);
+        acc[id] = {
+          humanHighlights: [],  // humanHighlights.map((hl) => ({ ...hl, type: "human" }))
+          modelHighlights: [],  // modelHighlights.map((hl) => ({ ...hl, type: "model" }))
+          iou: ious[idx],
+          hausdorffDistance: hausdorffDistances[idx]
+        };
+        return acc;
+      }, {})
+    }));
+
+    console.log(nanMean(ious), ious);
+    console.log(nanMean(hausdorffDistances), hausdorffDistances);
+  }
+
+  const setHighlightsForId = (id, updateFunc) => {
+    setTexts((prevTexts) =>
+      prevTexts.map((t) => (t.id === id ? { ...t, highlights: updateFunc(t.highlights) } : t))
     );
   };
 
@@ -84,20 +189,28 @@ function App() {
   };
 
   const handleFileUpload = (res) => {
-    // Save file name and texts
+    // Save uploaded data to state
     setFileName(res.fileName);
     setTexts(res.data);
-
-    // Initialise highlights with empty arrays for each text
-    setHighlights(Array.from({ length: res.data.length }, () => []));
   }
 
   const handleFileDelete = () => {
     // Restore default values
     setFileName("");
     setTexts([]);
-    setHighlights([]);
     setEditLog([]);
+  }
+
+  const setAnnotated = (id, isAnnotated) => {
+    setTexts((prevEntries) => {
+      return prevEntries.map((item) => item.id == id ? { ...item, isAnnotated: isAnnotated } : item )
+    });
+  }
+
+  const setExample = (id, isExample) => {
+    setTexts((prevEntries) => {
+      return prevEntries.map((item) => item.id == id ? { ...item, isExample: isExample } : item )
+    });
   }
 
   useEffect(() => {
@@ -115,22 +228,24 @@ function App() {
   }, []);
 
   return (
-    <div 
+    <div
       style={{
-        height: "100%",
-        display: "flex",
+        height: "100vh", // Ensures the container fills the viewport height
+        display: "flex", // Flex container
+        boxSizing: "border-box",
+        overflow: "hidden"
       }}
     >
+      {/* Sidebar */}
       <div
         style={{
-          position: "fixed",
-          width: "230px",
-          height: "100%",
+          width: "230px", // Fixed width
+          height: "100%", // Full height of the parent
           backgroundColor: "#f7f7f7",
           borderRight: "1px solid #ddd",
-          padding: "50px 30px 50px 30px",
-          overflowY: "auto",
-          boxSizing: "border-box"
+          padding: "20px 30px 20px 30px",
+          overflowY: "auto", // Allows scrolling independently
+          boxSizing: "border-box",
         }}
       >
         <div
@@ -138,71 +253,69 @@ function App() {
             display: "flex",
             flexDirection: "column",
             gap: "2px",
-            paddingBottom: "0px"
+            paddingBottom: "0px",
           }}
         >
           <h2>File</h2>
-          { texts.length === 0 ? (
+          {texts.length === 0 ? (
             <FileUpload onUpload={handleFileUpload} />
           ) : (
-            <FileManager fileName={fileName} texts={texts} highlights={highlights} editLog={editLog} onDelete={handleFileDelete} />
+            <FileManager
+              fileName={fileName}
+              texts={texts}
+              editLog={editLog}
+              onDelete={handleFileDelete}
+              researchQuestion={researchQuestion}
+              setResearchQuestion={setResearchQuestion}
+            />
           )}
         </div>
-        
-        { texts.length > 0 &&
-          <CodeList highlights={highlights.flat()} focusedOnAny={focusedOnAny} />
-        }
+
+        {texts.length > 0 && (
+          <>
+            <CodingStats
+              texts={texts}
+              minAnnotated={40}
+              minExamples={3}
+              onButtonClick={codeWithLLM}
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              researchQuestion={researchQuestion}
+            />
+            <CodeList highlights={texts.map((t) => t.highlights).flat().filter((hl) => hl.type === "human")} focusedOnAny={focusedOnAny} />
+          </>
+        )}
       </div>
 
       <div
         style={{
-          marginLeft: "240px", // Prevents overlap with the fixed sidebar
-          padding: "30px 0px"
+          flex: 1, // Takes up the remaining width of the parent
+          display: "flex",
+          flexDirection: "row",
+          overflow: "hidden", // Prevents content spill
+          boxSizing: "border-box",
+          height: "100%",
+          position: "relative", // Make the parent relative for absolute positioning
+          backgroundColor: "#fcfcfa"
         }}
       >
+        {/* Coding Pane */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
+            flex: 1, // Coding pane takes up all available space
+            overflow: "auto", // Enable scrolling if necessary
           }}
         >
-          {texts.map((item, idx) => {
-            const textHighlights = highlights[idx] || [];
-            return (
-              <div style={{display: "flex", gap: "20px", marginLeft: "50px"}} key={idx}>
-                {Array.from({ length: item.depth }).map((_, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      width: "1px",
-                      backgroundColor: "#ddd",
-                      margin: "0px 0",
-                    }}
-                  />
-                ))}
-
-                <div>
-                  <CodingPane 
-                    text={item.text} 
-                    highlights={textHighlights}
-                    setHighlights={(updateFunc) => setHighlightsForIdx(idx, updateFunc)}
-                    focusedOnAny={focusedOnAny}
-                    createLog={(logData) => createLog({ ...logData, textId: item.id })}
-                  />
-
-                  {idx < texts.length - 1 && item.depth === texts[idx + 1].depth && (
-                    <div
-                      style={{
-                        width: "50px",
-                        height: "1px",
-                        backgroundColor: "#ddd",
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          <CodingPane
+            texts={texts}
+            getAncestors={getAncestors}
+            setHighlightsForId={setHighlightsForId}
+            focusedOnAny={focusedOnAny}
+            createLog={createLog}
+            setAnnotated={setAnnotated}
+            setExample={setExample}
+            evalSession={evalSession}
+          />
         </div>
       </div>
     </div>

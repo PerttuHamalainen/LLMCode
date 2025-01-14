@@ -1,6 +1,7 @@
 import React from "react";
 import readXlsxFile from "read-excel-file";
 import Papa from "papaparse";
+import { parseTextHighlights } from "./helpers";
 
 const FileUpload = ({ onUpload }) => {
   const handleFileUpload = (event) => {
@@ -25,7 +26,7 @@ const FileUpload = ({ onUpload }) => {
       // Get header row and find column indices
       const header = rows[0].map((col) => (col ? col.toLowerCase() : ""));
       const idIndex = header.indexOf("id");
-      const textIndex = header.indexOf("text");
+      const textIndex = header.indexOf("coded_text") || header.indexOf("text");
       const depthIndex = header.indexOf("depth");
       const parentIdIndex = header.indexOf("parent_id");
     
@@ -35,7 +36,8 @@ const FileUpload = ({ onUpload }) => {
         return;
       }
     
-      const data = [];
+      var data = [];
+      var lastIdxWithHighlight = 0;
       let idCounter = 0;
     
       // Parse each row (starting from the second row)
@@ -47,17 +49,29 @@ const FileUpload = ({ onUpload }) => {
         const id = idIndex !== -1 ? row[idIndex] || null : `${idCounter++}`;
         const depth = depthIndex !== -1 ? parseInt(row[depthIndex], 10) : 0;
         const parentId = parentIdIndex !== -1 ? row[parentIdIndex] || null : null;
+
+        // Parse and remove any highlights from text
+        var { plainText, textHighlights } = parseTextHighlights(text);
+        textHighlights = textHighlights.map((hl) => ({ ...hl, type: "human" }))
+
+        if (textHighlights.length > 0) {
+          lastIdxWithHighlight = i - 1;
+        }
     
-        // Create an object for the current row
+        // Create a text item for the current row
         const item = {
           id,
-          text,
+          text: plainText,
           depth: isNaN(depth) ? 0 : depth, // Default depth to 0 if invalid
           parentId,
+          isExample: false,
+          highlights: textHighlights,
         };
-    
         data.push(item);
       }
+
+      // Mark data as annotated up to lastIdxWithHighlight
+      data = data.map((item, idx) => ({...item, isAnnotated: idx <= lastIdxWithHighlight ? true : false }));
 
       // Check that the data fits in localStorage, with room for annotations
       const localStorageLimitInMB = 5;
@@ -107,7 +121,7 @@ const FileUpload = ({ onUpload }) => {
         onChange={handleFileUpload}
         style={{ marginBottom: "10px" }}
       />
-      <p style={{ color: "#333", fontSize: "14px", lineHeight: 1.6 }}>Upload a CSV or Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.</p>
+      <p style={{ color: "#333", fontSize: "14px", lineHeight: 1.6 }}>Upload a CSV or Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>If the file has a column coded_text for existing codes, this is used instead. Any existing code annotations of the form **highlight**&lt;sup&gt;codes&lt;/sup&gt; in the texts will be automatically parsed by the system.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.</p>
     </div>
   );
 };

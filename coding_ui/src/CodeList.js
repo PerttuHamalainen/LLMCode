@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const CodeList = ({ highlights, setHighlights, focusedOnAny }) => {
+const CodeList = ({ highlights, focusedOnAny }) => {
   const [codeList, setCodeList] = useState([]);
 
   useEffect(() => {
