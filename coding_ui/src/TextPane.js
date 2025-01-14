@@ -139,8 +139,8 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
   
     // Validate indices
     if (selectedString && startIndex !== -1 && endIndex !== -1) {
-      // Check for overlap with existing highlights
-      const isOverlapping = highlights.some(
+      // Check for overlap with existing human highlights
+      const isOverlapping = highlights.filter((hl) => hl.type === "human").some(
         (hl) =>
           (startIndex >= hl.startIndex && startIndex < hl.endIndex) || // New highlight starts inside an existing highlight
           (endIndex > hl.startIndex && endIndex <= hl.endIndex) ||     // New highlight ends inside an existing highlight
@@ -273,9 +273,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
   const renderHighlightedText = (text, highlights) => {
     // Function to combine styles for overlapping highlights
     const getHighlightStyle = (highlight) => {
-      const styles = {
-        userSelect: "none",
-      };
+      const styles = {};
       if (highlight.type === "human") {
         styles.backgroundColor = highlight.focused || (!focusedOnAny && highlight.hovered) ? HUMAN_HL_COLOR_ACTIVE : HUMAN_HL_COLOR;
       }
