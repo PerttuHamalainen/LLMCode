@@ -130,20 +130,19 @@ function App() {
 
     // Add model highlights
     inputTexts.forEach(({ id }, idx) => {
-      var { textHighlights: modelHighlights } = parseTextHighlights(modelCodedTexts[idx]);
-      modelHighlights = modelHighlights.map((hl) => ({ ...hl, type: "model" }));
-      setHighlightsForId(id, (hls) => [...hls, ...modelHighlights]);
+      const modelCodedText = modelCodedTexts[idx];
+      if (modelCodedText !== null) {
+        var { textHighlights: modelHighlights } = parseTextHighlights(modelCodedText);
+        modelHighlights = modelHighlights.map((hl) => ({ ...hl, type: "model" }));
+        setHighlightsForId(id, (hls) => [...hls, ...modelHighlights]);
+      }
     });
 
     // Store results for eval session
     setEvalSession((value) => ({
       ...value,
       results: inputTexts.reduce((acc, { id }, idx) => {
-        const { textHighlights: humanHighlights } = parseTextHighlights(humanCodedTexts[idx]);
-        const { textHighlights: modelHighlights } = parseTextHighlights(modelCodedTexts[idx]);
         acc[id] = {
-          humanHighlights: [],  // humanHighlights.map((hl) => ({ ...hl, type: "human" }))
-          modelHighlights: [],  // modelHighlights.map((hl) => ({ ...hl, type: "model" }))
           iou: ious[idx],
           hausdorffDistance: hausdorffDistances[idx]
         };

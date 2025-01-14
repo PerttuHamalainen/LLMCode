@@ -74,10 +74,10 @@ const CodingPane = ({
               Select sorting option
             </option>
             <option value="original">Original order</option>
-            <option value="leastSimilarHighlights">Least similar highlights</option>
-            <option value="mostSimilarHighlights">Most similar highlights</option>
-            <option value="leastSimilarCodes">Least similar codes</option>
-            <option value="mostSimilarCodes">Most similar codes</option>
+            <option value="leastSimilarHighlights">Highlight similarity (worst)</option>
+            <option value="mostSimilarHighlights">Highlight similarity (best)</option>
+            <option value="leastSimilarCodes">Code similarity (worst)</option>
+            <option value="mostSimilarCodes">Code similarity (best)</option>
           </select>
         </div>
       )}
