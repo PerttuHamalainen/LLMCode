@@ -1,6 +1,6 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { formatTextWithHighlights } from "./Helpers";
+import { formatTextWithHighlights } from "./helpers";
 
 const DownloadButton = ({ text, onDownload }) => {
   return (
@@ -39,11 +39,10 @@ const DeleteFileButton = ({ onDelete }) => {
   );
 };
 
-const FileManager = ({ fileName, texts, highlights, editLog, onDelete, researchQuestion, setResearchQuestion }) => {
+const FileManager = ({ fileName, texts, editLog, onDelete, researchQuestion, setResearchQuestion }) => {
   const handleFileDownload = (fileType) => {
-    const codedTexts = texts.map((item, idx) => {
-      const textHighlights = highlights[idx];
-      return formatTextWithHighlights(item.text, textHighlights);
+    const codedTexts = texts.map((item) => {
+      return formatTextWithHighlights(item.text, item.highlights);
     });
   
     // Prepare the data

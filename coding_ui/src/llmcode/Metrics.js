@@ -4,14 +4,14 @@ import { embed } from "./LLM";
 
 export async function runCodingEval(humanCodedTexts, modelCodedTexts, embeddingContext, embeddingModel) {
   // Calculate IoU
-  const IoUs = extractIoU(humanCodedTexts, modelCodedTexts);
+  const ious = extractIoU(humanCodedTexts, modelCodedTexts);
 
   // Calculate Hausdorff on text level
   const humanCodes = extractCodes(humanCodedTexts);
   const modelCodes = extractCodes(modelCodedTexts);
   const hausdorffDistances = await calculateHausdorffDistances(humanCodes, modelCodes, embeddingContext, embeddingModel);
 
-  return { IoUs, hausdorffDistances };
+  return { ious, hausdorffDistances };
 }
 
 function extractIoU(humanCodedTexts, modelCodedTexts) {

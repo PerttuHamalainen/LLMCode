@@ -1,6 +1,7 @@
 import React from "react";
 import readXlsxFile from "read-excel-file";
 import Papa from "papaparse";
+import { parseTextHighlights } from "./helpers";
 
 const FileUpload = ({ onUpload }) => {
   const handleFileUpload = (event) => {
@@ -14,48 +15,6 @@ const FileUpload = ({ onUpload }) => {
       const blob = new Blob([jsonString]);
       const sizeInBytes = blob.size;
       return sizeInBytes;
-    };
-
-    const parseTextHighlights = (text) => {
-      // Regular expression to match **highlight**<sup>codes</sup>
-      const pattern = /\*\*([\s\S]*?)\*\*<sup>(.*?)<\/sup>/g;
-
-      // Initialize results and plainText
-      const highlights = [];
-      let plainText = "";
-      let currentOffset = 0;
-
-      // Process all matches
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-        const [fullMatch, highlight, codes] = match;
-
-        // Compute the plain text up to the current match
-        plainText += text.slice(currentOffset, match.index) + highlight;
-
-        // Compute the startIndex and endIndex in the plain text
-        const startIndex = plainText.length - highlight.length;
-        const endIndex = plainText.length;
-
-        // Add the match details to the results
-        highlights.push({
-          id: crypto.randomUUID(),
-          startIndex,
-          endIndex,
-          codes,
-          text: highlight,
-          focused: false,
-          hovered: false,
-        });
-
-        // Update the offset to continue parsing
-        currentOffset = match.index + fullMatch.length;
-      }
-
-      // Append any remaining text after the last match
-      plainText += text.slice(currentOffset);
-
-      return { plainText: plainText, textHighlights: highlights };
     };
   
     const parseData = (rows, fileName) => {
@@ -78,7 +37,6 @@ const FileUpload = ({ onUpload }) => {
       }
     
       var data = [];
-      const highlights = [];
       var lastIdxWithHighlight = 0;
       let idCounter = 0;
     
@@ -93,8 +51,8 @@ const FileUpload = ({ onUpload }) => {
         const parentId = parentIdIndex !== -1 ? row[parentIdIndex] || null : null;
 
         // Parse and remove any highlights from text
-        let { plainText, textHighlights } = parseTextHighlights(text);
-        highlights.push(textHighlights);
+        var { plainText, textHighlights } = parseTextHighlights(text);
+        textHighlights = textHighlights.map((hl) => ({ ...hl, type: "human" }))
 
         if (textHighlights.length > 0) {
           lastIdxWithHighlight = i - 1;
@@ -107,6 +65,7 @@ const FileUpload = ({ onUpload }) => {
           depth: isNaN(depth) ? 0 : depth, // Default depth to 0 if invalid
           parentId,
           isExample: false,
+          highlights: textHighlights,
         };
         data.push(item);
       }
@@ -121,7 +80,7 @@ const FileUpload = ({ onUpload }) => {
 
       if (sizeInBytes < sizeLimit) {
         console.log(`Object size is ${(sizeInBytes / 1024).toFixed(2)} KB. Safe to store and process in localStorage.`);
-        onUpload({ fileName, data, highlights });
+        onUpload({ fileName, data });
       } else {
         alert(`File size (${(sizeInBytes / 1024).toFixed(2)} KB) exceeds the ${(sizeLimit / 1024).toFixed(2)} KB limit.`);
       }
