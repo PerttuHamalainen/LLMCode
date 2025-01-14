@@ -17,15 +17,15 @@ const CodingPane = ({
   const sortedTexts = React.useMemo(() => {
     if (!evalSession?.results || !sortOption || sortOption === "original") return texts;
   
-    const sorted = [...texts].sort((a, b) => {
+    const sortedEval = texts.filter((item) => item.id in evalSession.results).sort((a, b) => {
       const aData = evalSession.results[a.id] || {};
       const bData = evalSession.results[b.id] || {};
   
       const aIou = aData.iou != null ? aData.iou : Infinity; // Fallback only if null or undefined
       const bIou = bData.iou != null ? bData.iou : Infinity;
   
-      const aHausdorff = aData.hausdorffDistance != null ? aData.hausdorffDistance : Infinity;
-      const bHausdorff = bData.hausdorffDistance != null ? bData.hausdorffDistance : Infinity;
+      const aHausdorff = aData.hausdorffDistance != null && !Number.isNaN(aData.hausdorffDistance) ? aData.hausdorffDistance : Infinity;
+      const bHausdorff = bData.hausdorffDistance != null && !Number.isNaN(bData.hausdorffDistance) ? bData.hausdorffDistance : Infinity;
   
       switch (sortOption) {
         case "leastSimilarHighlights":
@@ -41,7 +41,8 @@ const CodingPane = ({
       }
     });
 
-    return sorted;
+    // Add remaining texts that weren't evaluated at the end
+    return [...sortedEval, ...texts.filter((item) => !(item.id in evalSession.results))];
   }, [texts, evalSession, sortOption]);
 
   return (
@@ -126,7 +127,7 @@ const CodingPane = ({
                 }
                 setAnnotated={(isAnnotated) => setAnnotated(item.id, isAnnotated)}
                 setExample={(isExample) => setExample(item.id, isExample)}
-                evalData={evalSession.results ? evalSession.results[item.id] : null}
+                evalData={evalSession?.results ? evalSession.results[item.id] : null}
               />
             </div>
           );

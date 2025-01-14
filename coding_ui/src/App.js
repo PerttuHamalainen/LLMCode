@@ -65,10 +65,7 @@ function App() {
     localStorage.setItem("researchQuestion", researchQuestion);
   }, [researchQuestion]);
 
-  const [evalSession, setEvalSession] = useState({
-    examples: null,
-    results: null
-  });
+  const [evalSession, setEvalSession] = useState(null);
 
   const getAncestors = (parentId) => {
     const parentText = texts.find((item) => item.id === parentId);
@@ -306,16 +303,43 @@ function App() {
             overflow: "auto", // Enable scrolling if necessary
           }}
         >
-          <CodingPane
-            texts={texts}
-            getAncestors={getAncestors}
-            setHighlightsForId={setHighlightsForId}
-            focusedOnAny={focusedOnAny}
-            createLog={createLog}
-            setAnnotated={setAnnotated}
-            setExample={setExample}
-            evalSession={evalSession}
-          />
+          { !evalSession || evalSession.results ? (
+            <CodingPane
+              texts={texts}
+              getAncestors={getAncestors}
+              setHighlightsForId={setHighlightsForId}
+              focusedOnAny={focusedOnAny}
+              createLog={createLog}
+              setAnnotated={setAnnotated}
+              setExample={setExample}
+              evalSession={evalSession}
+            />
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "100%", // Fill the entire height
+                gap: "20px", // Add spacing between text and spinner
+              }}
+            >
+              <p style={{ fontSize: "18px", color: "#666", margin: 0 }}>
+                Coding with AI...
+              </p>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  border: "4px solid #ccc",
+                  borderTop: "4px solid #666",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite",
+                }}
+              ></div>
+            </div>
+          )}
         </div>
       </div>
     </div>
