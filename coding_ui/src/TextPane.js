@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import './CodingPane.css';
 import CodeLabel from "./CodeLabel";
 import ToggleButton from "./components/ToggleButton";
-import { HUMAN_HL_COLOR, HUMAN_HL_COLOR_ACTIVE, MODEL_HL_COLOR, MODEL_HL_COLOR_ACTIVE } from "./colors";
+import { HUMAN_HL_COLOR, HUMAN_HL_COLOR_ACTIVE, MODEL_HL_COLOR, MODEL_HL_COLOR_ACTIVE, NEUTRAL_MEDIUM_COLOR } from "./colors";
 import ScoreBox from "./components/ScoreBox";
 
 const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny, createLog, setAnnotated, setExample, evalData }) => {
@@ -228,48 +228,6 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
     );
   };
 
-  // const renderHighlightedText = (text, highlights) => {
-  //   // Sort highlights by startIndex to avoid overlapping issues
-  //   const sortedHighlights = [...highlights].sort((a, b) => a.startIndex - b.startIndex);
-  
-  //   const parts = [];
-  //   let currentIndex = 0;
-  
-  //   sortedHighlights.forEach((hl, index) => {
-  //     const { startIndex, endIndex } = hl;
-  
-  //     // Add the non-highlighted text before the current highlight
-  //     if (currentIndex < startIndex) {
-  //       parts.push(<span key={`text-${index}`}>{text.slice(currentIndex, startIndex)}</span>);
-  //     }
-  
-  //     // Add the highlighted text
-  //     parts.push(
-  //       <span
-  //         key={`highlight-${index}`}
-  //         style={{
-  //           backgroundColor: hl.focused || (!focusedOnAny && hl.hovered) ? "#fab96b" : "#ffe0ba",
-  //           borderRadius: "4px",
-  //         }}
-  //         onMouseEnter={() => updateHover(true, hl.id)}
-  //         onMouseLeave={() => updateHover(false, hl.id)}
-  //       >
-  //         {text.slice(startIndex, endIndex)}
-  //       </span>
-  //     );
-  
-  //     // Update the current index
-  //     currentIndex = endIndex;
-  //   });
-  
-  //   // Add any remaining non-highlighted text
-  //   if (currentIndex < text.length) {
-  //     parts.push(<span key="text-end">{text.slice(currentIndex)}</span>);
-  //   }
-  
-  //   return parts;
-  // };
-
   const renderHighlightedText = (text, highlights) => {
     // Function to combine styles for overlapping highlights
     const getHighlightStyle = (highlight) => {
@@ -335,8 +293,8 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         { evalData &&
           <>
-            <ScoreBox name={"IoU"} score={evalData.iou} color={"#f0ebe4"} />
-            <ScoreBox name={"Hsf"} score={evalData.hausdorffDistance} color={"#f0ebe4"} />
+            <ScoreBox name={"IoU"} score={evalData.iou} color={NEUTRAL_MEDIUM_COLOR} />
+            <ScoreBox name={"Hsf"} score={evalData.hausdorffDistance} color={NEUTRAL_MEDIUM_COLOR} />
           </>
         }
         <ToggleButton
@@ -349,7 +307,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
           }}
           activeText="✔ Annotated"
           inactiveText="Mark as annotated"
-          activeColor="#f0ebe4"
+          activeColor={NEUTRAL_MEDIUM_COLOR}
         />
         <ToggleButton
           isActive={item.isExample}

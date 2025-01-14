@@ -10,6 +10,7 @@ import { initializeClient } from "./llmcode/LLM";
 import { codeInductivelyWithCodeConsistency } from "./llmcode/Coding";
 import { formatTextWithHighlights, nanMean, parseTextHighlights } from "./helpers";
 import { runCodingEval } from "./llmcode/Metrics";
+import { NEUTRAL_LIGHT_COLOR } from "./colors";
 
 function App() {
   const [fileName, setFileName] = useState(() => {
@@ -303,6 +304,7 @@ function App() {
           style={{
             flex: 1, // Coding pane takes up all available space
             overflow: "auto", // Enable scrolling if necessary
+            backgroundColor: NEUTRAL_LIGHT_COLOR,
           }}
         >
           { !evalSession || evalSession.results ? (
