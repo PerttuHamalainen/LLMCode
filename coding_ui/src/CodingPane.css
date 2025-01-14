@@ -1,6 +1,6 @@
 [data-placeholder]:empty::before {
   content: attr(data-placeholder);
-  color: #aaa;
+  color: #8a6232;
   pointer-events: none;
 }
 

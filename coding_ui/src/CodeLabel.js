@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { HUMAN_HL_COLOR, HUMAN_HL_COLOR_ACTIVE, MODEL_HL_COLOR, MODEL_HL_COLOR_ACTIVE } from "./colors";
+import { HUMAN_HL_COLOR, HUMAN_HL_COLOR_ACTIVE, MODEL_HL_COLOR, MODEL_HL_COLOR_ACTIVE, HUMAN_HL_COLOR_DARK } from "./colors";
 
 const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focusedOnAny }) => {
   const [text, setText] = useState(highlight.codes || "");
@@ -96,7 +96,7 @@ const CodeLabel = ({ highlight, onTextChange, onFocusChange, onHoverChange, focu
           backgroundColor: highlight.focused || (!focusedOnAny && highlight.hovered) ? activeColor : baseColor,
           borderRadius: "8px",
           padding: "5px 8px",
-          color: text ? "black" : "#aaa",
+          color: "black",
           position: "relative",
           whiteSpace: "nowrap",
           overflow: "hidden",
