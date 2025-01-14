@@ -6,6 +6,7 @@ import FileUpload from "./FileUpload";
 import './App.css';
 import FileManager from "./FileManager";
 import CodingStats from "./CodingStats";
+import LoadingPane from "./LoadingPane";
 import { initializeClient } from "./llmcode/LLM";
 import { codeInductivelyWithCodeConsistency } from "./llmcode/Coding";
 import { formatTextWithHighlights, nanMean, parseTextHighlights } from "./helpers";
@@ -102,6 +103,11 @@ function App() {
     // Start new eval session
     setEvalSession({
       examples: examples,
+      progress: {
+        current: 0,
+        max: inputs.length,
+        frac: 0
+      },
       results: null
     });
 
@@ -111,6 +117,7 @@ function App() {
       examples,
       researchQuestion,
       "gpt-4o",
+      (progress) => setEvalSession((s) => ({ ...s, progress: progress}))
     );
 
     console.log(modelCodedTexts);
@@ -319,30 +326,7 @@ function App() {
               evalSession={evalSession}
             />
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-                height: "100%", // Fill the entire height
-                gap: "20px", // Add spacing between text and spinner
-              }}
-            >
-              <p style={{ fontSize: "18px", color: "#666", margin: 0 }}>
-                Coding with AI...
-              </p>
-              <div
-                style={{
-                  width: "40px",
-                  height: "40px",
-                  border: "4px solid #ccc",
-                  borderTop: "4px solid #666",
-                  borderRadius: "50%",
-                  animation: "spin 1s linear infinite",
-                }}
-              ></div>
-            </div>
+            <LoadingPane progress={evalSession.progress} />
           )}
         </div>
       </div>

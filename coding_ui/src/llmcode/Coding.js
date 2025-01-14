@@ -6,15 +6,13 @@ export async function codeInductivelyWithCodeConsistency(
     examples,
     researchQuestion,
     gptModel,
-    maxTokens = null,
+    onProgress = () => {}
   ) {
     // Dynamically set maxTokens based on the maximum text length
-    if (!maxTokens) {
-      maxTokens = Math.max(
-        ...inputs.map((input) => input.text.length),
-        300 // Default to 300 if no large text exists
-      );
-    }
+    const maxTokens = Math.max(
+      ...inputs.map((input) => input.text.length),
+      300 // Default to 300 if no large text exists
+    );
 
     const codingInstructions = `- Ignore text that is not relevant to the research question: ${researchQuestion}`
   
@@ -59,6 +57,13 @@ export async function codeInductivelyWithCodeConsistency(
           );
         }
       }
+
+      // Update progress
+      onProgress({
+        current: idx + 1,
+        max: inputs.length,
+        frac: (idx + 1) / inputs.length
+      });
     }
   
     return { codedTexts, codeDescriptions };
