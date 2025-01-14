@@ -21,24 +21,38 @@ const CodingPane = ({
       const aData = evalSession.results[a.id] || {};
       const bData = evalSession.results[b.id] || {};
   
-      const aIou = aData.iou != null ? aData.iou : Infinity; // Fallback only if null or undefined
+      const aIou = aData.iou != null ? aData.iou : Infinity;
       const bIou = bData.iou != null ? bData.iou : Infinity;
   
       const aHausdorff = aData.hausdorffDistance != null && !Number.isNaN(aData.hausdorffDistance) ? aData.hausdorffDistance : Infinity;
       const bHausdorff = bData.hausdorffDistance != null && !Number.isNaN(bData.hausdorffDistance) ? bData.hausdorffDistance : Infinity;
   
+      let primaryComparison = 0;
       switch (sortOption) {
         case "leastSimilarHighlights":
-          return aIou - bIou;
+          primaryComparison = aIou - bIou;
+          break;
         case "mostSimilarHighlights":
-          return bIou - aIou;
+          primaryComparison = bIou - aIou;
+          break;
         case "leastSimilarCodes":
-          return bHausdorff - aHausdorff;
+          primaryComparison = bHausdorff - aHausdorff;
+          break;
         case "mostSimilarCodes":
-          return aHausdorff - bHausdorff;
+          primaryComparison = aHausdorff - bHausdorff;
+          break;
         default:
-          return 0;
+          primaryComparison = 0;
       }
+
+      if (primaryComparison !== 0) {
+        return primaryComparison; // Use primary comparison if not equal
+      }
+
+      // Secondary comparison: Prefer items with more highlights
+      const aHighlightsCount = a.highlights ? a.highlights.length : 0;
+      const bHighlightsCount = b.highlights ? b.highlights.length : 0;
+      return bHighlightsCount - aHighlightsCount; // Prefer more highlights
     });
 
     // Add remaining texts that weren't evaluated at the end
