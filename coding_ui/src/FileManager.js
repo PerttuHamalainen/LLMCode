@@ -1,78 +1,59 @@
+import React, { useState, useRef, useEffect } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { formatTextWithHighlights } from "./helpers";
+import MenuButton from "./components/MenuButton";
 
-const DownloadButton = ({ text, onDownload }) => {
-  return (
-    <button
-      onClick={onDownload}
-      style={{
-        padding: "5px 20px",
-        color: "#333",
-        cursor: "pointer",
-      }}
-    >
-      {text}
-    </button>
-  );
-};
+const FileManager = ({ texts, editLog, onDelete }) => {
+  const [showPopup, setShowPopup] = useState(false);
+  const popupRef = useRef(null);
 
-const DeleteFileButton = ({ onDelete }) => {
-  const handleDelete = () => {
-    const userConfirmed = window.confirm("Are you sure you want to delete this file and all its annotations?");
-    if (userConfirmed) {
-      onDelete();
+  const handleClickOutside = (event) => {
+    if (popupRef.current && !popupRef.current.contains(event.target)) {
+      setShowPopup(false);
     }
   };
 
-  return (
-    <button
-      onClick={handleDelete}
-      style={{
-        padding: "5px 20px",
-        color: "#333",
-        cursor: "pointer",
-      }}
-    >
-      Delete file
-    </button>
-  );
-};
+  useEffect(() => {
+    if (showPopup) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
 
-const FileManager = ({ fileName, texts, editLog, onDelete, researchQuestion, setResearchQuestion }) => {
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showPopup]);
+
   const handleFileDownload = (fileType) => {
     const codedTexts = texts.map((item) => {
       return formatTextWithHighlights(item.text, item.highlights);
     });
-  
-    // Prepare the data
+
     const data = texts.map((item, idx) => {
       const { parentId, ...rest } = item;
       return {
         ...rest,
-        parent_id: parentId, // Rename 'parentId' to 'parent_id'
+        parent_id: parentId,
         coded_text: codedTexts[idx],
       };
     });
-  
+
     if (fileType === "csv") {
-      // CSV Download using PapaParse
       const csv = Papa.unparse(data);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-  
-      // Trigger CSV download
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", "coded_texts.csv");
       link.click();
       URL.revokeObjectURL(url);
     } else if (fileType === "xlsx") {
-      // Excel Download using xlsx
       const worksheet = XLSX.utils.json_to_sheet(data);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Coded Texts");
-  
+
       const excelBuffer = XLSX.write(workbook, {
         bookType: "xlsx",
         type: "array",
@@ -81,8 +62,6 @@ const FileManager = ({ fileName, texts, editLog, onDelete, researchQuestion, set
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;",
       });
       const url = URL.createObjectURL(blob);
-  
-      // Trigger Excel download
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", "coded_texts.xlsx");
@@ -94,66 +73,60 @@ const FileManager = ({ fileName, texts, editLog, onDelete, researchQuestion, set
   };
 
   const handleLogDownload = () => {
-    // Convert the `editLog` object to a JSON string
     const jsonString = JSON.stringify(editLog, null, 2);
-  
-    // Create a Blob with the JSON content and specify the MIME type
     const blob = new Blob([jsonString], { type: "application/json;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-  
-    // Create a temporary link and trigger the download
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", "coding_log.json");
     link.click();
-  
-    // Clean up the URL object
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
-        paddingBottom: "20px"
-      }}
-    >
-      <p style={{
-        whiteSpace: "normal",
-        wordBreak: "break-word",
-        overflowWrap: "break-word",
-        color: "#333",
-        fontSize: "14px",
-        lineHeight: 1.6,
-        margin: "0px 0px 15px 0px",
-        padding: 0
-      }}>
-        {fileName}
-      </p>
-      
-      <DownloadButton text="Download coded file" onDownload={() => handleFileDownload("xlsx")} />
-      <DownloadButton text="Download logs" onDownload={handleLogDownload} />
-      <DeleteFileButton onDelete={onDelete} />
+  const togglePopup = () => setShowPopup(!showPopup);
 
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <p style={{ fontSize: "14px" }}>Research question:</p>
-        <input
-        type="text"
-        value={researchQuestion}
-        onChange={(e) => setResearchQuestion(e.target.value)}
-        placeholder="Enter research question"
-        style={{
-          width: "100%",
-          flex: 1,
-          padding: "5px",
-          border: "1px solid #ccc",
-          borderRadius: "3px",
-          boxSizing: "border-box",
-        }}
-      />
-      </div>
+  return (
+    <div style={{ position: "relative", fontSize: "24px", cursor: "pointer" }}>
+      {/* Menu Icon */}
+      <div onClick={togglePopup}>⋯</div>
+
+      {/* Popup Menu */}
+      {showPopup && (
+        <div
+          ref={popupRef}  
+          style={{
+            position: "absolute",
+            top: "30px",
+            left: "0px",
+            width: "200px",
+            backgroundColor: "#fff",
+            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+            borderRadius: "8px",
+            padding: "10px",
+            zIndex: 100,
+          }}
+        >
+          <MenuButton onClick={() => handleFileDownload("csv")}>
+            Download Coded Texts (CSV)
+          </MenuButton>
+          <MenuButton onClick={() => handleFileDownload("xlsx")}>
+            Download Coded Texts (Excel)
+          </MenuButton>
+          <MenuButton onClick={handleLogDownload}>
+            Download Coding Log
+          </MenuButton>
+          <MenuButton
+            onClick={() => {
+              const confirmDelete = window.confirm("Are you sure you want to delete this file?");
+              if (confirmDelete) {
+                onDelete();
+              }
+            }}
+          >
+            Delete File
+          </MenuButton>
+        </div>
+      )}
     </div>
   );
 };

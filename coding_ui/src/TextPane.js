@@ -348,7 +348,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
       <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px" }} onMouseUp={handleTextSelect}>
         <div
           style={{
-            width: "600px",
+            width: item.isExample ? "528px" : "550px",
             textAlign: "left",
             lineHeight: "2.2"
           }}

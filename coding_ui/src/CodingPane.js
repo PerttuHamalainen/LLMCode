@@ -1,5 +1,8 @@
 import TextPane from "./TextPane";
 import React, { useState } from "react";
+import LLMPane from "./LLMPane";
+import EvalTopBar from "./EvalTopBar";
+import { NEUTRAL_MEDIUM_DARK_COLOR } from "./colors";
 
 const CodingPane = ({
   texts,
@@ -9,15 +12,30 @@ const CodingPane = ({
   createLog,
   setAnnotated,
   setExample,
-  evalSession
+  evalSession,
+  apiKey,
+  setApiKey,
+  researchQuestion,
+  setResearchQuestion,
+  codeWithLLM
 }) => {
-  const [sortOption, setSortOption] = useState(null); // Tracks the selected sorting option
+  const [displayState, setDisplayState] = useState({
+    sortOption: null,
+    showInput: true,
+    showExamples: true
+  });
 
   // Sorting logic
   const sortedTexts = React.useMemo(() => {
-    if (!evalSession?.results || !sortOption || sortOption === "original") return texts;
+    const filteredTexts = texts.filter((item) => {
+      return !(item.isExample && !displayState.showExamples) && !(!item.isExample && !displayState.showInput)
+    });
+
+    if (!evalSession?.results || !displayState.sortOption || displayState.sortOption === "original") {
+      return filteredTexts;
+    }
   
-    const sortedEval = texts.filter((item) => item.id in evalSession.results).sort((a, b) => {
+    const sortedEval = filteredTexts.filter((item) => item.id in evalSession.results).sort((a, b) => {
       const aData = evalSession.results[a.id] || {};
       const bData = evalSession.results[b.id] || {};
   
@@ -28,7 +46,7 @@ const CodingPane = ({
       const bHausdorff = bData.hausdorffDistance != null && !Number.isNaN(bData.hausdorffDistance) ? bData.hausdorffDistance : Infinity;
   
       let primaryComparison = 0;
-      switch (sortOption) {
+      switch (displayState.sortOption) {
         case "leastSimilarHighlights":
           primaryComparison = aIou - bIou;
           break;
@@ -56,45 +74,53 @@ const CodingPane = ({
     });
 
     // Add remaining texts that weren't evaluated at the end
-    return [...sortedEval, ...texts.filter((item) => !(item.id in evalSession.results))];
-  }, [texts, evalSession, sortOption]);
+    return [...sortedEval, ...filteredTexts.filter((item) => !(item.id in evalSession.results))];
+  }, [texts, evalSession, displayState]);
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Top Bar for Sorting */}
-      {evalSession?.results && (
-        <div
-          style={{
-            padding: "10px",
-            backgroundColor: "#f5f5f5",
-            borderBottom: "1px solid #ddd",
-          }}
-        >
-          <label htmlFor="sort-menu" style={{ marginRight: "10px" }}>
-            Sort by:
-          </label>
-          <select
-            id="sort-menu"
-            value={sortOption || ""}
-            onChange={(e) => setSortOption(e.target.value)}
-            style={{
-              padding: "5px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            <option value="" disabled>
-              Select sorting option
-            </option>
-            <option value="original">Original order</option>
-            <option value="leastSimilarHighlights">Highlight similarity (worst)</option>
-            <option value="mostSimilarHighlights">Highlight similarity (best)</option>
-            <option value="leastSimilarCodes">Code similarity (worst)</option>
-            <option value="mostSimilarCodes">Code similarity (best)</option>
-          </select>
-        </div>
-      )}
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
+      {/* Floating elements */}
+      <div
+        style={{
+          position: "absolute",
+          top: "10px",
+          width: "100%",
+          display: "flex",
+          gap: "10px",
+          justifyContent: "flex-end",
+          padding: "0px 20px",
+          boxSizing: "border-box",
+          pointerEvents: "none",
+        }}
+      >
+        {evalSession?.results && (
+          <EvalTopBar displayState={displayState} setDisplayState={setDisplayState} />
+        )}
+
+        <LLMPane
+          texts={texts}
+          apiKey={apiKey}
+          setApiKey={setApiKey}
+          researchQuestion={researchQuestion}
+          setResearchQuestion={setResearchQuestion}
+          codeWithLLM={codeWithLLM}
+          evalSession={evalSession}
+        />
+      </div>
+
+      {/* Divider */}
+      <div
+        style={{
+          position: "absolute",
+          top: "0px",
+          left: "0px",
+          width: "600px",
+          height: "100%",
+          // width: "1px",
+          backgroundColor: "white",
+        }}
+      >
+      </div>
 
       {/* Coding Pane */}
       <div
@@ -103,11 +129,12 @@ const CodingPane = ({
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
-          gap: "20px",
-          padding: "25px 10px",
+          gap: "40px",
+          padding: `${evalSession?.results ? "80" : "20"}px 35px`,
           boxSizing: "border-box",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
+          zIndex: 1,
         }}
       >
         {sortedTexts.map((item, idx) => {
@@ -116,7 +143,7 @@ const CodingPane = ({
               style={{
                 display: "flex",
                 gap: "18px",
-                marginLeft: item.isExample ? "28px" : "50px",
+                // marginLeft: item.isExample ? "28px" : "50px",
               }}
               key={idx}
             >

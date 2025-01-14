@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import CodingPane from './CodingPane';
-import EvalPane from "./EvalPane";
+import TopBar from "./TopBar";
 import CodeList from "./CodeList";
 import FileUpload from "./FileUpload";
 import './App.css';
-import FileManager from "./FileManager";
-import CodingStats from "./CodingStats";
 import LoadingPane from "./LoadingPane";
 import { initializeClient } from "./llmcode/LLM";
 import { codeInductivelyWithCodeConsistency } from "./llmcode/Coding";
@@ -51,12 +49,16 @@ function App() {
 
   const [apiKey, setApiKey] = useState(() => {
     const savedKey = localStorage.getItem("apiKey");
-    initializeClient(savedKey);
-    return savedKey ? savedKey : "";
+    if (savedKey?.submitted) {
+      initializeClient(savedKey.key);
+    }
+    return savedKey ? JSON.parse(savedKey) : { key: "", submitted: false };
   });
   useEffect(() => {
-    initializeClient(apiKey);
-    localStorage.setItem("apiKey", apiKey);
+    if (apiKey.submitted) {
+      initializeClient(apiKey.key);
+    }
+    localStorage.setItem("apiKey", JSON.stringify(apiKey));
   }, [apiKey]);
 
   const [researchQuestion, setResearchQuestion] = useState(() => {
@@ -235,98 +237,76 @@ function App() {
   }, []);
 
   return (
-    <div
+    <div 
       style={{
-        height: "100vh", // Ensures the container fills the viewport height
-        display: "flex", // Flex container
+        height: "100vh",
+        display: "flex", 
+        flexDirection: "column",
         boxSizing: "border-box",
         overflow: "hidden"
       }}
     >
-      {/* Sidebar */}
+      <TopBar
+        texts={texts}
+        onUpload={handleFileUpload}
+        fileName={fileName}
+        editLog={editLog}
+        onDelete={handleFileDelete}
+        apiKey={apiKey}
+        setApiKey={setApiKey}
+      />
+
       <div
         style={{
-          width: "230px", // Fixed width
-          height: "100%", // Full height of the parent
-          backgroundColor: "#f7f7f7",
-          borderRight: "1px solid #ddd",
-          padding: "20px 30px 20px 30px",
-          overflowY: "auto", // Allows scrolling independently
+          height: "100vh",
+          display: "flex",
           boxSizing: "border-box",
+          overflow: "hidden",
+          position: "relative", // Important for positioning the floating pane
         }}
       >
+        {/* Central Coding View */}
         <div
           style={{
+            flex: 1, // Takes up the remaining width of the parent
             display: "flex",
-            flexDirection: "column",
-            gap: "2px",
-            paddingBottom: "0px",
+            flexDirection: "row",
+            overflow: "hidden",
+            boxSizing: "border-box",
+            height: "100%",
+            backgroundColor: "#fcfcfa",
           }}
         >
-          <h2>File</h2>
           {texts.length === 0 ? (
             <FileUpload onUpload={handleFileUpload} />
           ) : (
-            <FileManager
-              fileName={fileName}
-              texts={texts}
-              editLog={editLog}
-              onDelete={handleFileDelete}
-              researchQuestion={researchQuestion}
-              setResearchQuestion={setResearchQuestion}
-            />
-          )}
-        </div>
-
-        {texts.length > 0 && (
-          <>
-            <CodingStats
-              texts={texts}
-              minAnnotated={40}
-              minExamples={3}
-              onButtonClick={codeWithLLM}
-              apiKey={apiKey}
-              setApiKey={setApiKey}
-              researchQuestion={researchQuestion}
-            />
-            <CodeList highlights={texts.map((t) => t.highlights).flat().filter((hl) => hl.type === "human")} focusedOnAny={focusedOnAny} />
-          </>
-        )}
-      </div>
-
-      <div
-        style={{
-          flex: 1, // Takes up the remaining width of the parent
-          display: "flex",
-          flexDirection: "row",
-          overflow: "hidden", // Prevents content spill
-          boxSizing: "border-box",
-          height: "100%",
-          position: "relative", // Make the parent relative for absolute positioning
-          backgroundColor: "#fcfcfa"
-        }}
-      >
-        {/* Coding Pane */}
-        <div
-          style={{
-            flex: 1, // Coding pane takes up all available space
-            overflow: "auto", // Enable scrolling if necessary
-            backgroundColor: NEUTRAL_LIGHT_COLOR,
-          }}
-        >
-          { !evalSession || evalSession.results ? (
-            <CodingPane
-              texts={texts}
-              getAncestors={getAncestors}
-              setHighlightsForId={setHighlightsForId}
-              focusedOnAny={focusedOnAny}
-              createLog={createLog}
-              setAnnotated={setAnnotated}
-              setExample={setExample}
-              evalSession={evalSession}
-            />
-          ) : (
-            <LoadingPane progress={evalSession.progress} />
+            <div
+              style={{
+                flex: 1, // Coding pane takes up all available space
+                overflow: "auto", // Enable scrolling if necessary
+                backgroundColor: NEUTRAL_LIGHT_COLOR,
+              }}
+            >
+              {!evalSession || evalSession.results ? (
+                <CodingPane
+                  texts={texts}
+                  getAncestors={getAncestors}
+                  setHighlightsForId={setHighlightsForId}
+                  focusedOnAny={focusedOnAny}
+                  createLog={createLog}
+                  setAnnotated={setAnnotated}
+                  setExample={setExample}
+                  evalSession={evalSession}
+                  apiKey={apiKey}
+                  setApiKey={setApiKey}
+                  researchQuestion={researchQuestion}
+                  setResearchQuestion={setResearchQuestion}
+                  codeWithLLM={codeWithLLM}
+                />
+              ) : (
+                <LoadingPane progress={evalSession.progress} />
+              )}
+            </div>
           )}
         </div>
       </div>

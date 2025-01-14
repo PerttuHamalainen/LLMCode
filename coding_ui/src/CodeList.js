@@ -33,8 +33,6 @@ const CodeList = ({ highlights, focusedOnAny }) => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-      <h2>Codes</h2>
-
       {codeList.length > 0 ? (
         codeList.map((code, idx) => (
           <div key={idx} style={{ display: "flex", justifyContent: "space-between", gap: "2px" }}>

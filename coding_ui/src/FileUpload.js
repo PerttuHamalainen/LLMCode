@@ -114,14 +114,34 @@ const FileUpload = ({ onUpload }) => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        width: "100%",
+        height: "100%", // Fill the entire height
+        gap: "40px", // Add spacing between elements
+      }}
+    >
       <input
         type="file"
         accept=".csv, .xlsx"
         onChange={handleFileUpload}
         style={{ marginBottom: "10px" }}
       />
-      <p style={{ color: "#333", fontSize: "14px", lineHeight: 1.6 }}>Upload a CSV or Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>If the file has a column coded_text for existing codes, this is used instead. Any existing code annotations of the form **highlight**&lt;sup&gt;codes&lt;/sup&gt; in the texts will be automatically parsed by the system.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.</p>
+      <p 
+        style={{ 
+          width: "450px",
+          color: "#333", 
+          fontSize: "14px",
+          textAlign: "left",
+          lineHeight: 1.6,
+        }}
+      >
+        Upload a CSV or Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>If the file has a column coded_text for existing codes, this is used instead. Any existing code annotations of the form **highlight**&lt;sup&gt;codes&lt;/sup&gt; in the texts will be automatically parsed by the system.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.
+      </p>
     </div>
   );
 };
