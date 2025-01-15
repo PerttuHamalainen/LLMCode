@@ -120,19 +120,22 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
   
     while (walker.nextNode()) {
       const textNode = walker.currentNode;
-      const nodeLength = textNode.textContent.length;
-  
+      
+      // Normalize line breaks in this node
+      const normalizedText = textNode.textContent.replace(/\r?\n/g, "\n");
+      const nodeLength = normalizedText.length;
+    
       // Check if the selection starts within the current text node
       if (textNode === range.startContainer) {
         startIndex = currentIndex + range.startOffset;
       }
-  
+    
       // Check if the selection ends within the current text node
       if (textNode === range.endContainer) {
         endIndex = currentIndex + range.endOffset;
         break;
       }
-  
+    
       // Update the cumulative index
       currentIndex += nodeLength;
     }
@@ -229,6 +232,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
   };
 
   const renderHighlightedText = (text, highlights) => {
+    // Function to combine styles for overlapping highlights
     const getHighlightStyle = (highlight) => {
       const styles = {};
       if (highlight.type === "human") {
@@ -246,7 +250,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
       return styles;
     };
   
-    // Collect all highlight boundary positions (start and end)
+    // Get all highlight boundary positions (start and end)
     const highlightChanges = [
       ...new Set(highlights.flatMap((hl) => [hl.startIndex, hl.endIndex])),
     ]
@@ -257,7 +261,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
     let startIndex = 0;
   
     highlightChanges.forEach((endIndex) => {
-      // Find all highlights overlapping [startIndex, endIndex)
+      // Find highlights overlapping [startIndex, endIndex)
       const spanHighlights = highlights.filter(
         (hl) => hl.startIndex < endIndex && hl.endIndex > startIndex
       );
@@ -267,22 +271,17 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
         return { ...acc, ...getHighlightStyle(highlight) };
       }, {});
   
-      // Preserve line breaks in this text slice
-      const chunkText = text.slice(startIndex, endIndex).split(/\r?\n/g);
-  
       parts.push(
         <span
           key={`highlight-${startIndex}`}
-          style={combinedStyle}
+          style={{
+            ...combinedStyle,
+            whiteSpace: "pre-wrap"
+          }}
           onMouseEnter={() => spanHighlights.forEach((hl) => updateHover(true, hl.id))}
           onMouseLeave={() => spanHighlights.forEach((hl) => updateHover(false, hl.id))}
         >
-          {chunkText.map((chunk, idx) => (
-            <React.Fragment key={idx}>
-              {idx > 0 && <br />} 
-              {chunk}
-            </React.Fragment>
-          ))}
+          {text.slice(startIndex, endIndex)}
         </span>
       );
   
@@ -291,15 +290,14 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
   
     // Handle any trailing text after the last highlight boundary
     if (startIndex < text.length) {
-      const remainder = text.slice(startIndex).split(/\r?\n/g);
       parts.push(
-        <span key="text-end">
-          {remainder.map((chunk, idx) => (
-            <React.Fragment key={idx}>
-              {idx > 0 && <br />}
-              {chunk}
-            </React.Fragment>
-          ))}
+        <span
+          key="text-end"
+          style={{
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {text.slice(startIndex)}
         </span>
       );
     }
