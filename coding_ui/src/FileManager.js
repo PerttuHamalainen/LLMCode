@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 import { formatTextWithHighlights } from "./helpers";
 import MenuButton from "./components/MenuButton";
 
-const FileManager = ({ texts, editLog, onDelete }) => {
+const FileManager = ({ texts, editLog, studyData, onDelete }) => {
   const [showPopup, setShowPopup] = useState(false);
   const popupRef = useRef(null);
 
@@ -83,6 +83,17 @@ const FileManager = ({ texts, editLog, onDelete }) => {
     URL.revokeObjectURL(url);
   };
 
+  const handleStudyDataDownload = () => {
+    const jsonString = JSON.stringify(studyData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "study_data.json");
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const togglePopup = () => setShowPopup(!showPopup);
 
   return (
@@ -114,6 +125,9 @@ const FileManager = ({ texts, editLog, onDelete }) => {
           </MenuButton>
           <MenuButton onClick={handleLogDownload}>
             Download Coding Log
+          </MenuButton>
+          <MenuButton onClick={handleStudyDataDownload}>
+            Download Study Data
           </MenuButton>
           <MenuButton
             onClick={() => {

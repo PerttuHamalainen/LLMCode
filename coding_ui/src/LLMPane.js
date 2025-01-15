@@ -1,7 +1,7 @@
 import React from "react";
 import { DARK_ACCENT_COLOR } from "./colors";
 
-const MIN_ANNOTATED = 70;
+const MIN_ANNOTATED = 20;
 const MIN_EXAMPLES = 2;
 
 const LLMPane = ({ texts, apiKey, researchQuestion, setResearchQuestion, codeWithLLM, evalSession }) => {

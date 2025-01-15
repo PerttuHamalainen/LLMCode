@@ -7,9 +7,13 @@ import './App.css';
 import LoadingPane from "./LoadingPane";
 import { initializeClient } from "./llmcode/LLM";
 import { codeInductivelyWithCodeConsistency } from "./llmcode/Coding";
-import { formatTextWithHighlights, nanMean, parseTextHighlights } from "./helpers";
+import { formatTextWithHighlights, splitData, nanMean, parseTextHighlights } from "./helpers";
 import { runCodingEval } from "./llmcode/Metrics";
 import { NEUTRAL_LIGHT_COLOR } from "./colors";
+
+// For the purposes of our study
+const N_TEST = 40;
+const N_VALID_MAX = 80;
 
 function App() {
   const [fileName, setFileName] = useState(() => {
@@ -72,29 +76,61 @@ function App() {
   const [evalSession, setEvalSession] = useState(null);
 
   const getAncestors = (parentId) => {
-    const parentText = texts.find((item) => item.id === parentId);
+    const parentText = allTexts.find((item) => item.id === parentId);
     if (!parentText.parentId) {
       return [parentText.text];
     }
-    const ancestors = getAncestors(parentText.parentId, texts);
+    const ancestors = getAncestors(parentText.parentId);
     return [...ancestors, parentText.text];
   };
 
+  // For user study
+  const [allTexts, setAllTexts] = useState(() => {
+    const savedTexts = localStorage.getItem("allTexts");
+    return savedTexts ? JSON.parse(savedTexts) : [];
+  });
+  useEffect(() => {
+    localStorage.setItem("allTexts", JSON.stringify(allTexts));
+  }, [allTexts]);
+
+  // For user study
+  const [studyData, setStudyData] = useState(() => {
+    const savedData = localStorage.getItem("studyData");
+    return savedData ? JSON.parse(savedData) : {};
+  });
+  useEffect(() => {
+    localStorage.setItem("studyData", JSON.stringify(studyData));
+  }, [studyData]);
+
   const codeWithLLM = async () => {
-    // Remove any previous model highlights
-    setTexts((prevTexts) =>
-      prevTexts.map((t) => ({ ...t, highlights: t.highlights.filter((hl) => hl.type !== "model") }))
-    );
+    var textsToCode = [];
+    if (evalSession === null) {
+      // If first instance of LLM coding, separate test and eval sets
+      const annotatedTexts = texts.filter(({ isAnnotated }) => isAnnotated);
+      const { testSet, validationSet } = splitData(annotatedTexts, N_TEST, N_VALID_MAX);
+      setStudyData({
+        testSet,
+        log: []
+      });
+      setTexts(validationSet);
+      textsToCode = validationSet;
+    } else {
+      // Remove any previous model highlights
+      setTexts((prevTexts) =>
+        prevTexts.map((t) => ({ ...t, highlights: t.highlights.filter((hl) => hl.type !== "model") }))
+      );
+      textsToCode = texts;
+    }
 
     // Construct input texts with ancestors
-    const inputTexts = texts.filter(({ isAnnotated, isExample }) => isAnnotated && !isExample).slice(0, 30);  // TODO!!! For now only take first 30
+    const inputTexts = textsToCode.filter(({ isAnnotated, isExample }) => isAnnotated && !isExample);
     const inputs = inputTexts.map(({ text, parentId }) => ({
       text: text,
       ancestors: parentId ? getAncestors(parentId) : [],
     }));
 
     // Construct examples with ancestors
-    const exampleTexts = texts.filter(({ isExample }) => isExample);
+    const exampleTexts = textsToCode.filter(({ isExample }) => isExample);
     const examples = exampleTexts.map(({ id, text, parentId, highlights }) => ({
       id,
       text,
@@ -148,16 +184,33 @@ function App() {
       }
     });
 
+    const results = inputTexts.reduce((acc, { id }, idx) => {
+      acc[id] = {
+        iou: ious[idx],
+        hausdorffDistance: hausdorffDistances[idx]
+      };
+      return acc;
+    }, {});
+
     // Store results for eval session
     setEvalSession((value) => ({
       ...value,
-      results: inputTexts.reduce((acc, { id }, idx) => {
-        acc[id] = {
-          iou: ious[idx],
-          hausdorffDistance: hausdorffDistances[idx]
-        };
-        return acc;
-      }, {})
+      results: results
+    }));
+
+    // Log results
+    setStudyData((data) => ({
+      ...data,
+      log: [
+        ...data.log,
+        {
+          inputs,
+          examples,
+          results,
+          researchQuestion: researchQuestion,
+          date: new Date()
+        }
+      ]
     }));
 
     console.log(nanMean(ious), ious);
@@ -200,6 +253,7 @@ function App() {
     // Save uploaded data to state
     setFileName(res.fileName);
     setTexts(res.data);
+    setAllTexts(res.data);
   }
 
   const handleFileDelete = () => {
@@ -208,6 +262,8 @@ function App() {
     setTexts([]);
     setEditLog([]);
     setEvalSession(null);
+    setStudyData({});
+    setResearchQuestion("");
   }
 
   const setAnnotated = (id, isAnnotated) => {
@@ -254,6 +310,7 @@ function App() {
         onDelete={handleFileDelete}
         apiKey={apiKey}
         setApiKey={setApiKey}
+        studyData={studyData}
       />
 
       <div

@@ -21,7 +21,7 @@ const FileIcon = () => {
   );
 };
 
-const TopBar = ({ texts, fileName, editLog, onDelete, apiKey, setApiKey }) => {
+const TopBar = ({ texts, fileName, editLog, onDelete, apiKey, setApiKey, studyData }) => {
   const annotatedCount = texts.filter((obj) => obj.isAnnotated).length;
   const exampleCount = texts.filter((obj) => obj.isExample).length;
 
@@ -58,6 +58,7 @@ const TopBar = ({ texts, fileName, editLog, onDelete, apiKey, setApiKey }) => {
             <FileManager
               texts={texts}
               editLog={editLog}
+              studyData={studyData}
               onDelete={onDelete}
             />
             <div style={{ display: "flex", alignItems: "center", gap: "5px", color: "gray" }}>

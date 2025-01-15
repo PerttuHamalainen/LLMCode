@@ -80,32 +80,41 @@ export function parseTextHighlights(text) {
   return { plainText: plainText, textHighlights: highlights };
 }
 
-/**
- * Splits an array of objects into test and validation sets.
- *
- * @param {Object[]} data - The array of objects to split.
- * @param {number} testCount - Number of samples for the test set.
- * @param {number} maxValidationCount - Maximum number of samples for the validation set.
- * @returns {{ testSet: Object[], validationSet: Object[] }}
- */
 export function splitData(data, testCount, maxValidationCount) {
-  // Make a shallow copy so we don't mutate the original data
-  const shuffled = [...data];
+  // Separate out non-example items
+  const exampleItems = data.filter((item) => item.isExample);
+  const nonExampleItems = data.filter((item) => !item.isExample);
 
-  // Fisher-Yates shuffle (in-place)
-  for (let i = shuffled.length - 1; i > 0; i--) {
+  // Shuffle the non-example items (Fisher-Yates).
+  const shuffledNonExamples = [...nonExampleItems];
+  for (let i = shuffledNonExamples.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    [shuffledNonExamples[i], shuffledNonExamples[j]] = [
+      shuffledNonExamples[j],
+      shuffledNonExamples[i],
+    ];
   }
 
-  // Slice out the test set
-  const testSet = shuffled.slice(0, testCount);
+  // Pick `testCount` items (non-examples only) for the test set.
+  const testSet = shuffledNonExamples.slice(0, testCount);
 
-  // Slice out the validation set from the remaining
-  const validationSet = shuffled.slice(testCount, testCount + maxValidationCount);
+  // The leftover non-examples are candidates for the validation set.
+  const validationNonExamples = shuffledNonExamples.slice(testCount, testCount + maxValidationCount - exampleItems.length);
+  const validationIds = new Set(validationNonExamples.map((item) => item.id));
+
+  // Build the validation set, preserving the order from original `data`.
+  const validationSet = [];
+  for (const item of data) {
+    if (item.isExample) {
+      // All example items must be included, ignoring maxValidationCount
+      validationSet.push(item);
+    } else if (validationIds.has(item.id)) {
+      validationSet.push(item);
+    }
+  }
 
   return {
     testSet,
-    validationSet
+    validationSet,
   };
 }
