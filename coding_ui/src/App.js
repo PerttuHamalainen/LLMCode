@@ -15,6 +15,8 @@ import { NEUTRAL_LIGHT_COLOR } from "./colors";
 const N_TEST = 40;
 const N_VALID_MAX = 80;
 
+const MAX_ANCESTORS = 5;
+
 function App() {
   const [fileName, setFileName] = useState(() => {
     // Load file name from local storage if available
@@ -83,12 +85,19 @@ function App() {
   }, [evalSession]);
 
   const getAncestors = (parentId) => {
-    const parentText = allTexts.find((item) => item.id === parentId);
-    if (!parentText.parentId) {
-      return [parentText.text];
-    }
-    const ancestors = getAncestors(parentText.parentId);
-    return [...ancestors, parentText.text];
+    const gatherAncestors = (id, depth) => {
+      const parentText = allTexts.find((item) => item.id === id);
+      if (!parentText || depth >= MAX_ANCESTORS) {
+        return parentText ? [parentText.text] : [];
+      }
+      if (!parentText.parentId) {
+        return [parentText.text];
+      }
+      const ancestors = gatherAncestors(parentText.parentId, depth + 1);
+      return [...ancestors, parentText.text];
+    };
+  
+    return gatherAncestors(parentId, 1);
   };
 
   const [prevAverages, setPrevAverages] = useState(() => {

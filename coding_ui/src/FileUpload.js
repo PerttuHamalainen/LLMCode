@@ -3,6 +3,7 @@ import readXlsxFile from "read-excel-file";
 import Papa from "papaparse";
 import { parseTextHighlights } from "./helpers";
 
+// Only supports Excel for now
 const FileUpload = ({ onUpload }) => {
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -26,7 +27,7 @@ const FileUpload = ({ onUpload }) => {
       // Get header row and find column indices
       const header = rows[0].map((col) => (col ? col.toLowerCase() : ""));
       const idIndex = header.indexOf("id");
-      const textIndex = header.indexOf("coded_text") || header.indexOf("text");
+      const textIndex = header.indexOf("coded_text") !== -1 ? header.indexOf("coded_text") : header.indexOf("text");
       const depthIndex = header.indexOf("depth");
       const parentIdIndex = header.indexOf("parent_id");
     
@@ -140,7 +141,7 @@ const FileUpload = ({ onUpload }) => {
           lineHeight: 1.6,
         }}
       >
-        Upload a CSV or Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>If the file has a column coded_text for existing codes, this is used instead. Any existing code annotations of the form **highlight**&lt;sup&gt;codes&lt;/sup&gt; in the texts will be automatically parsed by the system.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.
+        Upload an Excel file containing one text per row. The texts to be coded should be in a column labelled 'text'. You may also provide an 'id' column.<br/><br/>If the file has a column coded_text for existing codes, this is used instead. Any existing code annotations of the form **highlight**&lt;sup&gt;codes&lt;/sup&gt; in the texts will be automatically parsed by the system.<br/><br/>Optionally, to display hierarchical data, you may include a column 'depth' containing a depth index for each text in the hierarchy. In this case, remember to also include the id of the parent text in the 'parent_id' column.
       </p>
     </div>
   );

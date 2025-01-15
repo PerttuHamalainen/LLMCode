@@ -229,42 +229,47 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
   };
 
   const renderHighlightedText = (text, highlights) => {
-    // Function to combine styles for overlapping highlights
     const getHighlightStyle = (highlight) => {
       const styles = {};
       if (highlight.type === "human") {
-        styles.backgroundColor = highlight.focused || (!focusedOnAny && highlight.hovered) ? HUMAN_HL_COLOR_ACTIVE : HUMAN_HL_COLOR;
+        styles.backgroundColor =
+          highlight.focused || (!focusedOnAny && highlight.hovered)
+            ? HUMAN_HL_COLOR_ACTIVE
+            : HUMAN_HL_COLOR;
       }
       if (highlight.type === "model") {
-        styles.borderBottom = highlight.focused || (!focusedOnAny && highlight.hovered) ? `4px solid ${MODEL_HL_COLOR_ACTIVE}` : `4px solid ${MODEL_HL_COLOR}`;
+        styles.borderBottom =
+          highlight.focused || (!focusedOnAny && highlight.hovered)
+            ? `4px solid ${MODEL_HL_COLOR_ACTIVE}`
+            : `4px solid ${MODEL_HL_COLOR}`;
       }
       return styles;
     };
-
-    // Get all highlight changing points in ascending order, excluding 0
-    const highlightChanges = [...new Set(
-      highlights
-        .flatMap((hl) => [hl.startIndex, hl.endIndex])
-    )]
-    .sort((a, b) => a - b)
-    .filter((a) => a > 0);
+  
+    // Collect all highlight boundary positions (start and end)
+    const highlightChanges = [
+      ...new Set(highlights.flatMap((hl) => [hl.startIndex, hl.endIndex])),
+    ]
+      .sort((a, b) => a - b)
+      .filter((pos) => pos > 0);
   
     const parts = [];
     let startIndex = 0;
-    highlightChanges.forEach((endIndex) => {
-      // Highlight from startIdx to endIdx, as highlights are constant in this span
   
-      // Find highlights in this span
+    highlightChanges.forEach((endIndex) => {
+      // Find all highlights overlapping [startIndex, endIndex)
       const spanHighlights = highlights.filter(
         (hl) => hl.startIndex < endIndex && hl.endIndex > startIndex
       );
   
-      // Generate the combined style for overlapping highlights
+      // Merge highlight styles (for overlapping highlights)
       const combinedStyle = spanHighlights.reduce((acc, highlight) => {
         return { ...acc, ...getHighlightStyle(highlight) };
       }, {});
   
-      // Add the highlighted text with combined styles
+      // Preserve line breaks in this text slice
+      const chunkText = text.slice(startIndex, endIndex).split(/\r?\n/g);
+  
       parts.push(
         <span
           key={`highlight-${startIndex}`}
@@ -272,17 +277,31 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
           onMouseEnter={() => spanHighlights.forEach((hl) => updateHover(true, hl.id))}
           onMouseLeave={() => spanHighlights.forEach((hl) => updateHover(false, hl.id))}
         >
-          {text.slice(startIndex, endIndex)}
+          {chunkText.map((chunk, idx) => (
+            <React.Fragment key={idx}>
+              {idx > 0 && <br />} 
+              {chunk}
+            </React.Fragment>
+          ))}
         </span>
       );
   
-      // Update the start index
       startIndex = endIndex;
     });
   
-    // Add any remaining non-highlighted text
+    // Handle any trailing text after the last highlight boundary
     if (startIndex < text.length) {
-      parts.push(<span key="text-end">{text.slice(startIndex)}</span>);
+      const remainder = text.slice(startIndex).split(/\r?\n/g);
+      parts.push(
+        <span key="text-end">
+          {remainder.map((chunk, idx) => (
+            <React.Fragment key={idx}>
+              {idx > 0 && <br />}
+              {chunk}
+            </React.Fragment>
+          ))}
+        </span>
+      );
     }
   
     return parts;
