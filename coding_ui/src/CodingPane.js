@@ -2,7 +2,7 @@ import TextPane from "./TextPane";
 import React, { useState } from "react";
 import LLMPane from "./LLMPane";
 import EvalTopBar from "./EvalTopBar";
-import { NEUTRAL_MEDIUM_DARK_COLOR } from "./colors";
+import CodeList from "./CodeList";
 
 const CodingPane = ({
   texts,
@@ -93,6 +93,7 @@ const CodingPane = ({
           padding: "0px 20px",
           boxSizing: "border-box",
           pointerEvents: "none",
+          zIndex: 10,
         }}
       >
         {evalSession?.results && (
@@ -107,6 +108,14 @@ const CodingPane = ({
           setPrompt={setPrompt}
           codeWithLLM={codeWithLLM}
           evalSession={evalSession}
+        />
+
+        <CodeList
+          highlights={texts
+            .map((t) => t.highlights)
+            .flat()
+            .filter((hl) => hl.type === "human")}
+          focusedOnAny={focusedOnAny}
         />
       </div>
 
