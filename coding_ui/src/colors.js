@@ -9,3 +9,6 @@ export const NEUTRAL_MEDIUM_DARK_COLOR = "#ded5c8";
 export const NEUTRAL_DARK_COLOR = "#99938a";
 
 export const DARK_ACCENT_COLOR = "#12122b";
+
+export const EXAMPLE_GREEN_COLOR = "#a2e8c5";
+export const RED_COLOR = "#ea777b";

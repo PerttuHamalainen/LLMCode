@@ -13,6 +13,7 @@ const CodingPane = ({
   setAnnotated,
   setExample,
   evalSession,
+  prevAverages,
   apiKey,
   setApiKey,
   prompt,
@@ -86,15 +87,16 @@ const CodingPane = ({
           top: "10px",
           width: "100%",
           display: "flex",
+          flexDirection: "column",
           gap: "10px",
-          justifyContent: "flex-end",
+          alignItems: "flex-end",
           padding: "0px 20px",
           boxSizing: "border-box",
           pointerEvents: "none",
         }}
       >
         {evalSession?.results && (
-          <EvalTopBar displayState={displayState} setDisplayState={setDisplayState} />
+          <EvalTopBar displayState={displayState} setDisplayState={setDisplayState} evalAverages={evalSession.averages} prevAverages={prevAverages} />
         )}
 
         <LLMPane

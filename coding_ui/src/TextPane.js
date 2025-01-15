@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import './CodingPane.css';
 import CodeLabel from "./CodeLabel";
 import ToggleButton from "./components/ToggleButton";
-import { HUMAN_HL_COLOR, HUMAN_HL_COLOR_ACTIVE, MODEL_HL_COLOR, MODEL_HL_COLOR_ACTIVE, NEUTRAL_MEDIUM_COLOR } from "./colors";
+import { HUMAN_HL_COLOR, HUMAN_HL_COLOR_ACTIVE, MODEL_HL_COLOR, MODEL_HL_COLOR_ACTIVE, NEUTRAL_MEDIUM_COLOR, EXAMPLE_GREEN_COLOR } from "./colors";
 import ScoreBox from "./components/ScoreBox";
 
 const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny, createLog, setAnnotated, setExample, evalData }) => {
@@ -319,7 +319,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
           }}
           activeText="Example"
           inactiveText="Make example"
-          activeColor="#a2e8c5"
+          activeColor={EXAMPLE_GREEN_COLOR}
         />
         { item.parentId &&
           <p

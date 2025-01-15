@@ -74,7 +74,13 @@ function App() {
     localStorage.setItem("prompt", JSON.stringify(prompt));
   }, [prompt]);
 
-  const [evalSession, setEvalSession] = useState(null);
+  const [evalSession, setEvalSession] = useState(() => {
+    const savedEvalSession = localStorage.getItem("evalSession");
+    return savedEvalSession ? JSON.parse(savedEvalSession) : null;
+  });
+  useEffect(() => {
+    localStorage.setItem("evalSession", JSON.stringify(evalSession));
+  }, [evalSession]);
 
   const getAncestors = (parentId) => {
     const parentText = allTexts.find((item) => item.id === parentId);
@@ -84,6 +90,14 @@ function App() {
     const ancestors = getAncestors(parentText.parentId);
     return [...ancestors, parentText.text];
   };
+
+  const [prevAverages, setPrevAverages] = useState(() => {
+    const savedData = localStorage.getItem("prevAverages");
+    return savedData ? JSON.parse(savedData) : null;
+  });
+  useEffect(() => {
+    localStorage.setItem("prevAverages", JSON.stringify(prevAverages));
+  }, [prevAverages]);
 
   // For user study
   const [allTexts, setAllTexts] = useState(() => {
@@ -116,6 +130,8 @@ function App() {
       setTexts(validationSet);
       textsToCode = validationSet;
     } else {
+      // Save previous averages
+      setPrevAverages(evalSession.averages);
       // Remove any previous model highlights
       setTexts((prevTexts) =>
         prevTexts.map((t) => ({ ...t, highlights: t.highlights.filter((hl) => hl.type !== "model") }))
@@ -151,12 +167,11 @@ function App() {
     });
 
     // Prepare instructions
-    
-      var codingInstructions = prompt.instructions ? (
-        `- Ignore text that is not relevant to the research question: ${prompt.researchQuestion}\n${prompt.instructions}`
-      ) : (
-        `- Ignore text that is not relevant to the research question: ${prompt.researchQuestion}`
-      );
+    var codingInstructions = prompt.instructions ? (
+      `- Ignore text that is not relevant to the research question: ${prompt.researchQuestion}\n${prompt.instructions}`
+    ) : (
+      `- Ignore text that is not relevant to the research question: ${prompt.researchQuestion}`
+    );
 
     // Run LLM coding
     const { codedTexts: modelCodedTexts } = await codeInductivelyWithCodeConsistency(
@@ -202,11 +217,17 @@ function App() {
       };
       return acc;
     }, {});
+    const avgHighlightSimilarity = nanMean(ious);
+    const avgCodeSimilarity = nanMean(hausdorffDistances.map(d => Number.isNaN(d) ? NaN : 1 - d));
 
     // Store results for eval session
     setEvalSession((value) => ({
       ...value,
-      results: results
+      results: results,
+      averages: {
+        highlightSimilarity: avgHighlightSimilarity,
+        codeSimilarity: avgCodeSimilarity
+      }
     }));
 
     // Log results
@@ -273,6 +294,7 @@ function App() {
     setTexts([]);
     setEditLog([]);
     setEvalSession(null);
+    setPrevAverages(null);
     setStudyData({});
     setPrompt({ researchQuestion: "", instructions: "" });
   }
@@ -365,6 +387,7 @@ function App() {
                   setAnnotated={setAnnotated}
                   setExample={setExample}
                   evalSession={evalSession}
+                  prevAverages={prevAverages}
                   apiKey={apiKey}
                   setApiKey={setApiKey}
                   prompt={prompt}

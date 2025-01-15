@@ -69,7 +69,7 @@ const LLMPane = ({ texts, apiKey, prompt, setPrompt, codeWithLLM, evalSession })
               placeholder="Enter dashed list of coding instructions (Optional)"
               style={{
                 width: "100%",
-                fontSize: "12px",
+                fontSize: "12.5px",
                 flex: 1,
                 padding: "5px",
                 border: "1px solid #ccc",
@@ -106,7 +106,7 @@ const LLMPane = ({ texts, apiKey, prompt, setPrompt, codeWithLLM, evalSession })
                 border: "1px solid #ccc",
                 borderRadius: "3px",
                 boxSizing: "border-box",
-                fontSize: "12px",
+                fontSize: "12.5px",
               }}
             />
           </div>
