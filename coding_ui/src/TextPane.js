@@ -391,6 +391,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
                 top: hlGroup[0].y - 5, // Position the group based on the Y coordinate
                 display: "flex",
                 gap: "6px",
+                paddingRight: "400px",
               }}
               key={groupIndex}
             >
