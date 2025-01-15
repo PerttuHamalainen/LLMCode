@@ -38,7 +38,7 @@ const FileUpload = ({ onUpload }) => {
       }
     
       var data = [];
-      var lastIdxWithHighlight = 0;
+      var lastIdxWithHighlight = -1;
       let idCounter = 0;
     
       // Parse each row (starting from the second row)
