@@ -96,19 +96,28 @@ const CodingPane = ({
           zIndex: 10,
         }}
       >
-        {evalSession?.results && (
-          <EvalTopBar displayState={displayState} setDisplayState={setDisplayState} evalAverages={evalSession.averages} prevAverages={prevAverages} />
-        )}
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            gap: "10px",
+          }}
+        >
+          {evalSession?.results && (
+            <EvalTopBar displayState={displayState} setDisplayState={setDisplayState} evalAverages={evalSession.averages} prevAverages={prevAverages} />
+          )}
 
-        <LLMPane
-          texts={texts}
-          apiKey={apiKey}
-          setApiKey={setApiKey}
-          prompt={prompt}
-          setPrompt={setPrompt}
-          codeWithLLM={codeWithLLM}
-          evalSession={evalSession}
-        />
+          <LLMPane
+            texts={texts}
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            prompt={prompt}
+            setPrompt={setPrompt}
+            codeWithLLM={codeWithLLM}
+            evalSession={evalSession}
+          />
+        </div>
+        
 
         <CodeList
           highlights={texts

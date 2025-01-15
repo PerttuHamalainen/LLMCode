@@ -1,5 +1,5 @@
 import React from "react";
-import { DARK_ACCENT_COLOR } from "./colors";
+import { DARK_ACCENT_COLOR, NEUTRAL_DARK_COLOR, NEUTRAL_MEDIUM_DARK_COLOR } from "./colors";
 
 const MIN_ANNOTATED = 80;
 const MIN_EXAMPLES = 2;
@@ -21,6 +21,7 @@ const LLMPane = ({ texts, apiKey, prompt, setPrompt, codeWithLLM, evalSession })
         backgroundColor: "#fff",
         borderRadius: "12px",
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+        border: `1px solid ${NEUTRAL_MEDIUM_DARK_COLOR}`,
         padding: "20px",
         boxSizing: "border-box",
         overflowY: "auto",

@@ -18,7 +18,7 @@ const EvalTopBar = ({ displayState, setDisplayState, evalAverages, prevAverages 
       style={{
         width: "100%",
         flex: 1,
-        height: "25px",
+        height: "45px",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",

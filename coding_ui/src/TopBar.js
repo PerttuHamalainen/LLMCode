@@ -50,6 +50,7 @@ const TopBar = ({ texts, fileName, editLog, onDelete, apiKey, setApiKey, studyDa
         background: "#1c1b1a",
         userSelect: "none",
         boxSizing: "border-box",
+        fontSize: "14px",
       }}
     >
       { texts.length > 0 &&
@@ -125,7 +126,6 @@ const TopBar = ({ texts, fileName, editLog, onDelete, apiKey, setApiKey, studyDa
                 border: "none",
                 borderRadius: "3px",
                 cursor: "pointer",
-                fontSize: "14px",
                 }}
               >
                 Remove 
