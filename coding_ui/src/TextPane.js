@@ -354,7 +354,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
           }}
           ref={textRef}
         >
-          <p style={{ margin: 0, padding: 0 }}>
+          <p style={{ margin: 0, padding: 0, wordBreak: "break-word", overflowWrap: "break-word" }}>
             {renderHighlightedText(item.text, highlights)}
           </p>
         </div>
@@ -403,6 +403,8 @@ const Ancestors = ({ ancestors, isExample }) => {
       color: "gray",
       gap: "10px",
       paddingTop: "10px",
+      wordBreak: "break-word",
+      overflowWrap: "break-word"
     }}>
       {ancestors.map((ancestorText, idx) => (
         <div 
