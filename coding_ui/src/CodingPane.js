@@ -15,8 +15,8 @@ const CodingPane = ({
   evalSession,
   apiKey,
   setApiKey,
-  researchQuestion,
-  setResearchQuestion,
+  prompt,
+  setPrompt,
   codeWithLLM
 }) => {
   const [displayState, setDisplayState] = useState({
@@ -101,8 +101,8 @@ const CodingPane = ({
           texts={texts}
           apiKey={apiKey}
           setApiKey={setApiKey}
-          researchQuestion={researchQuestion}
-          setResearchQuestion={setResearchQuestion}
+          prompt={prompt}
+          setPrompt={setPrompt}
           codeWithLLM={codeWithLLM}
           evalSession={evalSession}
         />

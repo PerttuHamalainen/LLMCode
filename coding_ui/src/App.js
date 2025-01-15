@@ -65,13 +65,14 @@ function App() {
     localStorage.setItem("apiKey", JSON.stringify(apiKey));
   }, [apiKey]);
 
-  const [researchQuestion, setResearchQuestion] = useState(() => {
-    const savedRq = localStorage.getItem("researchQuestion");
-    return savedRq ? savedRq : "";
+  // Prompt includes research question and any model instructions
+  const [prompt, setPrompt] = useState(() => {
+    const savedPrompt = localStorage.getItem("prompt");
+    return savedPrompt ? JSON.parse(savedPrompt) : { researchQuestion: "", instructions: "" };
   });
   useEffect(() => {
-    localStorage.setItem("researchQuestion", researchQuestion);
-  }, [researchQuestion]);
+    localStorage.setItem("prompt", JSON.stringify(prompt));
+  }, [prompt]);
 
   const [evalSession, setEvalSession] = useState(null);
 
@@ -149,11 +150,20 @@ function App() {
       results: null
     });
 
+    // Prepare instructions
+    
+      var codingInstructions = prompt.instructions ? (
+        `- Ignore text that is not relevant to the research question: ${prompt.researchQuestion}\n${prompt.instructions}`
+      ) : (
+        `- Ignore text that is not relevant to the research question: ${prompt.researchQuestion}`
+      );
+
     // Run LLM coding
     const { codedTexts: modelCodedTexts } = await codeInductivelyWithCodeConsistency(
       inputs,
       examples,
-      researchQuestion,
+      prompt.researchQuestion,
+      codingInstructions,
       "gpt-4o",
       (progress) => setEvalSession((s) => ({ ...s, progress: progress}))
     );
@@ -166,7 +176,7 @@ function App() {
     ));
     console.log(humanCodedTexts);
 
-    const embeddingContext = `, in the context of the research question: ${researchQuestion}`;
+    const embeddingContext = `, in the context of the research question: ${prompt.researchQuestion}`;
     const { ious, hausdorffDistances } = await runCodingEval(
       humanCodedTexts,
       modelCodedTexts,
@@ -207,7 +217,7 @@ function App() {
           inputs,
           examples,
           results,
-          researchQuestion: researchQuestion,
+          researchQuestion: prompt.researchQuestion,
           date: new Date()
         }
       ]
@@ -263,7 +273,7 @@ function App() {
     setEditLog([]);
     setEvalSession(null);
     setStudyData({});
-    setResearchQuestion("");
+    setPrompt({ researchQuestion: "", instructions: "" });
   }
 
   const setAnnotated = (id, isAnnotated) => {
@@ -356,8 +366,8 @@ function App() {
                   evalSession={evalSession}
                   apiKey={apiKey}
                   setApiKey={setApiKey}
-                  researchQuestion={researchQuestion}
-                  setResearchQuestion={setResearchQuestion}
+                  prompt={prompt}
+                  setPrompt={setPrompt}
                   codeWithLLM={codeWithLLM}
                 />
               ) : (

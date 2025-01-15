@@ -5,6 +5,7 @@ export async function codeInductivelyWithCodeConsistency(
     inputs,
     examples,
     researchQuestion,
+    codingInstructions,
     gptModel,
     onProgress = () => {}
   ) {
@@ -13,8 +14,6 @@ export async function codeInductivelyWithCodeConsistency(
       ...inputs.map((input) => input.text.length),
       300 // Default to 300 if no large text exists
     );
-
-    const codingInstructions = `- Ignore text that is not relevant to the research question: ${researchQuestion}`
   
     const codedTexts = [];
     const codeDescriptions = {};
