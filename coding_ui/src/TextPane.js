@@ -439,7 +439,10 @@ const Ancestors = ({ ancestors, isExample }) => {
               height: "100%",
               backgroundColor: "lightGray",
           }}/>
-          {ancestorText}
+          <div
+            style={{ whiteSpace: "pre-wrap" }}
+            dangerouslySetInnerHTML={{ __html: ancestorText.replace(/\n/g, "<br>") }}
+          />
         </div>
       ))}
     </div>
