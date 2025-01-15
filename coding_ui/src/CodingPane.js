@@ -39,25 +39,25 @@ const CodingPane = ({
       const aData = evalSession.results[a.id] || {};
       const bData = evalSession.results[b.id] || {};
   
-      const aIou = aData.iou != null ? aData.iou : Infinity;
-      const bIou = bData.iou != null ? bData.iou : Infinity;
+      const aHlSim = aData.highlightSimilarity != null ? aData.highlightSimilarity : 0;
+      const bHlSim = bData.highlightSimilarity != null ? bData.highlightSimilarity : 0;
   
-      const aHausdorff = aData.hausdorffDistance != null && !Number.isNaN(aData.hausdorffDistance) ? aData.hausdorffDistance : Infinity;
-      const bHausdorff = bData.hausdorffDistance != null && !Number.isNaN(bData.hausdorffDistance) ? bData.hausdorffDistance : Infinity;
+      const aCodeSim = aData.codeSimilarity != null && !Number.isNaN(aData.codeSimilarity) ? aData.codeSimilarity : 0;
+      const bCodeSim = bData.codeSimilarity != null && !Number.isNaN(bData.codeSimilarity) ? bData.codeSimilarity : 0;
   
       let primaryComparison = 0;
       switch (displayState.sortOption) {
         case "leastSimilarHighlights":
-          primaryComparison = aIou - bIou;
+          primaryComparison = aHlSim - bHlSim;
           break;
         case "mostSimilarHighlights":
-          primaryComparison = bIou - aIou;
+          primaryComparison = bHlSim - aHlSim;
           break;
         case "leastSimilarCodes":
-          primaryComparison = bHausdorff - aHausdorff;
+          primaryComparison = aCodeSim - bCodeSim;
           break;
         case "mostSimilarCodes":
-          primaryComparison = aHausdorff - bHausdorff;
+          primaryComparison = bCodeSim - aCodeSim;
           break;
         default:
           primaryComparison = 0;

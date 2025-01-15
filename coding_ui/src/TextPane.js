@@ -293,8 +293,8 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         { evalData &&
           <>
-            <ScoreBox name={"IoU"} score={evalData.iou} color={NEUTRAL_MEDIUM_COLOR} />
-            <ScoreBox name={"Hsf"} score={evalData.hausdorffDistance} color={NEUTRAL_MEDIUM_COLOR} />
+            <ScoreBox name={"HS"} score={evalData.highlightSimilarity} color={NEUTRAL_MEDIUM_COLOR} description={"Highlight similarity"} />
+            <ScoreBox name={"CS"} score={evalData.codeSimilarity} color={NEUTRAL_MEDIUM_COLOR} description={"Code similarity"} />
           </>
         }
         <ToggleButton
@@ -342,7 +342,7 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
       </div>
 
       { showContext && (
-        <Ancestors ancestors={getAncestors(item.parentId)} />
+        <Ancestors ancestors={getAncestors(item.parentId)} isExample={item.isExample} />
       )}
 
       <div style={{ display: "flex", justifyContent: "center", alignItems: "stretch", gap: "30px" }} onMouseUp={handleTextSelect}>
@@ -393,10 +393,10 @@ const TextPane = ({ item, getAncestors, highlights, setHighlights, focusedOnAny,
   );
 };
 
-const Ancestors = ({ ancestors }) => {
+const Ancestors = ({ ancestors, isExample }) => {
   return (
     <div style={{
-      width: "600px",
+      width: isExample ? "528px" : "550px",
       display: "flex",
       flexDirection: "column",
       fontSize: "12px",

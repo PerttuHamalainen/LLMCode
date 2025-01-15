@@ -194,10 +194,11 @@ function App() {
       }
     });
 
+    // Note that we use 1 - Hausdorff as code similarity
     const results = inputTexts.reduce((acc, { id }, idx) => {
       acc[id] = {
-        iou: ious[idx],
-        hausdorffDistance: hausdorffDistances[idx]
+        highlightSimilarity: ious[idx],
+        codeSimilarity: Number.isNaN(hausdorffDistances[idx]) ? NaN : 1 - hausdorffDistances[idx]
       };
       return acc;
     }, {});
