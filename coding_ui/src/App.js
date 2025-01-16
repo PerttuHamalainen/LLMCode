@@ -219,7 +219,7 @@ function App() {
     const avgHighlightSimilarity = nanMean(ious);
     const avgCodeSimilarity = nanMean(hausdorffDistances.map(d => Number.isNaN(d) ? NaN : 1 - d));
 
-    // Log results
+    // Log study data
     const inputsWithAnnotations = inputTexts.map(({ id }, idx) => {
       const modelCodedText = modelCodedTexts[idx];
       var modelHighlights = [];
@@ -227,7 +227,7 @@ function App() {
         var { textHighlights: modelHighlights } = parseTextHighlights(modelCodedText);
         modelHighlights = modelHighlights.map((hl) => ({ ...hl, type: "model" }));
       }
-      const humanHighlights = texts.find((t) => t.id === id).highlights
+      const humanHighlights = texts.find((t) => t.id === id).highlights.filter((hl) => hl.type === "human")
       return {
         id,
         humanHighlights,
