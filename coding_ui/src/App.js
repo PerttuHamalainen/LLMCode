@@ -15,7 +15,7 @@ import { NEUTRAL_LIGHT_COLOR } from "./colors";
 const N_TEST = 40;
 const N_VALID_MAX = 80;
 
-const MAX_ANCESTORS = 5;
+const MAX_ANCESTORS = 3;
 
 function App() {
   const [fileName, setFileName] = useState(() => {
