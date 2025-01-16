@@ -2,7 +2,7 @@ import React from "react";
 import Tooltip from "./Tooltip";
 
 const ScoreBox = ({ name, score, color, description }) => {
-  const scoreLabel = `${score === null || Number.isNaN(score) ? "0.00" : score.toFixed(2)}`;
+  const scoreLabel = `${score === null || Number.isNaN(score) ? "—" : score.toFixed(2)}`;
 
   return (
     <Tooltip description={description}>

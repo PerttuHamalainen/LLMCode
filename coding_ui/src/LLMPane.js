@@ -5,7 +5,7 @@ import {
   HUMAN_HL_COLOR_ACTIVE,
 } from "./colors";
 
-const MIN_ANNOTATED = 80;
+const MIN_ANNOTATED = 20;
 const MIN_EXAMPLES = 2;
 
 const LLMPane = ({ texts, apiKey, prompt, setPrompt, codeWithLLM }) => {

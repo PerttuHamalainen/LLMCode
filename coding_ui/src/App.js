@@ -208,18 +208,8 @@ function App() {
       "text-embedding-3-large"
     );
 
-    // Add model highlights
-    inputTexts.forEach(({ id }, idx) => {
-      const modelCodedText = modelCodedTexts[idx];
-      if (modelCodedText !== null) {
-        var { textHighlights: modelHighlights } = parseTextHighlights(modelCodedText);
-        modelHighlights = modelHighlights.map((hl) => ({ ...hl, type: "model" }));
-        setHighlightsForId(id, (hls) => [...hls, ...modelHighlights]);
-      }
-    });
-
-    // Note that we use 1 - Hausdorff as code similarity
-    const results = inputTexts.reduce((acc, { id }, idx) => {
+     // Note that we use 1 - Hausdorff as code similarity
+     const results = inputTexts.reduce((acc, { id }, idx) => {
       acc[id] = {
         highlightSimilarity: ious[idx],
         codeSimilarity: Number.isNaN(hausdorffDistances[idx]) ? NaN : 1 - hausdorffDistances[idx]
@@ -229,6 +219,45 @@ function App() {
     const avgHighlightSimilarity = nanMean(ious);
     const avgCodeSimilarity = nanMean(hausdorffDistances.map(d => Number.isNaN(d) ? NaN : 1 - d));
 
+    // Log results
+    const inputsWithAnnotations = inputTexts.map(({ id }, idx) => {
+      const modelCodedText = modelCodedTexts[idx];
+      var modelHighlights = [];
+      if (modelCodedText !== null) {
+        var { textHighlights: modelHighlights } = parseTextHighlights(modelCodedText);
+        modelHighlights = modelHighlights.map((hl) => ({ ...hl, type: "model" }));
+      }
+      const humanHighlights = texts.find((t) => t.id === id).highlights
+      return {
+        id,
+        humanHighlights,
+        modelHighlights
+      }
+    });
+    setStudyData((data) => ({
+      ...data,
+      log: [
+        ...data.log,
+        {
+          inputsWithAnnotations,
+          examples,
+          results,
+          researchQuestion: prompt.researchQuestion,
+          date: new Date()
+        }
+      ]
+    }));
+
+    // Add model highlights to UI
+    inputTexts.forEach(({ id }, idx) => {
+      const modelCodedText = modelCodedTexts[idx];
+      if (modelCodedText !== null) {
+        var { textHighlights: modelHighlights } = parseTextHighlights(modelCodedText);
+        modelHighlights = modelHighlights.map((hl) => ({ ...hl, type: "model" }));
+        setHighlightsForId(id, (hls) => [...hls, ...modelHighlights]);
+      }
+    });
+
     // Store results for eval session
     setEvalSession((value) => ({
       ...value,
@@ -237,21 +266,6 @@ function App() {
         highlightSimilarity: avgHighlightSimilarity,
         codeSimilarity: avgCodeSimilarity
       }
-    }));
-
-    // Log results
-    setStudyData((data) => ({
-      ...data,
-      log: [
-        ...data.log,
-        {
-          inputs,
-          examples,
-          results,
-          researchQuestion: prompt.researchQuestion,
-          date: new Date()
-        }
-      ]
     }));
 
     console.log(nanMean(ious), ious);
