@@ -11,10 +11,6 @@ import { formatTextWithHighlights, splitData, nanMean, parseTextHighlights } fro
 import { runCodingEval } from "./llmcode/Metrics";
 import { NEUTRAL_LIGHT_COLOR } from "./colors";
 
-// For the purposes of our study
-const N_TEST = 40;
-const N_VALID_MAX = 80;
-
 const MAX_ANCESTORS = 3;
 
 function App() {
@@ -129,15 +125,13 @@ function App() {
   const codeWithLLM = async () => {
     var textsToCode = [];
     if (evalSession === null) {
-      // If first instance of LLM coding, separate test and eval sets
+      // If first instance of LLM coding, remove all non-annotated texts
       const annotatedTexts = texts.filter(({ isAnnotated }) => isAnnotated);
-      const { testSet, validationSet } = splitData(annotatedTexts, N_TEST, N_VALID_MAX);
       setStudyData({
-        testSet,
         log: []
       });
-      setTexts(validationSet);
-      textsToCode = validationSet;
+      setTexts(annotatedTexts);
+      textsToCode = annotatedTexts;
     } else {
       // Save previous averages
       setPrevAverages(evalSession.averages);
