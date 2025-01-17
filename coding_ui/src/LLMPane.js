@@ -178,7 +178,7 @@ const LLMPane = ({ texts, apiKey, prompt, setPrompt, codeWithLLM }) => {
                 </button>
                 {isCodingDisabled && (
                   <p style={{ color: "gray", fontSize: "12px", margin: "10px 0px -5px 0px" }}>
-                    You need at least 80 annotated texts, 2 examples, and a research question to use
+                    You need at least {MIN_ANNOTATED} annotated texts, {MIN_EXAMPLES} examples, and a research question to use
                     this feature.
                   </p>
                 )}
