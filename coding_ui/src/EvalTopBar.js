@@ -77,7 +77,7 @@ const EvalTopBar = ({ displayState, setDisplayState, evalAverages, prevAverages 
       >
         <Tooltip description="Average highlight similarity">
           <p>
-            Highlights <b>{evalAverages.highlightSimilarity.toFixed(2)}</b>{" "}
+            Highlight similarity <b>{evalAverages.highlightSimilarity.toFixed(2)}</b>{" "}
             {prevAverages && (
               <>
                 {metricChangeSymbol(
@@ -91,7 +91,7 @@ const EvalTopBar = ({ displayState, setDisplayState, evalAverages, prevAverages 
         </Tooltip>
         <Tooltip description="Average code similarity">
           <p>
-            Codes <b>{evalAverages.codeSimilarity.toFixed(2)}</b>{" "}
+            Code similarity <b>{evalAverages.codeSimilarity.toFixed(2)}</b>{" "}
             {prevAverages && (
               <>
                 {metricChangeSymbol(
