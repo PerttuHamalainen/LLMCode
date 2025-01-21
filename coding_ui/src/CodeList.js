@@ -124,14 +124,14 @@ const CodeList = ({ highlights, focusedOnAny }) => {
           style={{
             position: "absolute",
             bottom: "0px",
-            left: "-220px", // Adjust as needed to position the pop-up to the left
+            left: "-420px", // Adjust as needed to position the pop-up to the left
             transform: "translateY(100%)",
             backgroundColor: "#fff",
             border: "1px solid #ccc",
             borderRadius: "4px",
             padding: "10px",
             boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-            width: "200px",
+            width: "400px",
             zIndex: 9999,
           }}
         >

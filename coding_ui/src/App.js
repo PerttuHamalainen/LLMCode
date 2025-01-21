@@ -237,6 +237,7 @@ function App() {
           examples,
           results,
           researchQuestion: prompt.researchQuestion,
+          customPrompt: prompt.instructions,
           date: new Date()
         }
       ]
